@@ -7,7 +7,7 @@ import telebot
 from telebot import types
 import sqlite3, datetime
 from Game import Player
-API_TOKEN = '5932887460:AAEqLOtWTfWZrN8j8JJXiS3joAOXWPFYo5I'
+API_TOKEN = 'token'
 
 bot = telebot.TeleBot(API_TOKEN, skip_pending=True)
 
