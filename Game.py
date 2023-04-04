@@ -35,7 +35,7 @@ with sqlite3.connect('test.db') as connect:
     connect.commit()
     deserialized_person = pickle.loads(row[0])
 
-print(deserialized_person.name)
+print(deserialized_person.lvl)
 
 
 def intodb(indentificator, a):
