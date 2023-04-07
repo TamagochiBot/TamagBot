@@ -12,9 +12,9 @@ class DataBase:
         else:
             return False
 
-    def insert(self, id:int, pet_name:str = "undefined") -> None:
+    def insert(self, id:int,user_name:str = "unknown" ,pet_name:str = "undefined") -> None:
         #inserting player
-        self.__cursor.execute("""INSERT INTO player(id,pet_id) VALUES (?,?)""", (id, id,))
+        self.__cursor.execute("""INSERT INTO player(id,user_name,pet_id) VALUES (?,?,?)""", (id, user_name, id,))
 
         #inserting pet
         self.__cursor.execute("""INSERT INTO pet(id,name,inventory_id) VALUES (?,?,?)""", (id,pet_name, id,))

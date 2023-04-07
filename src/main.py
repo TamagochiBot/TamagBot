@@ -4,7 +4,7 @@ from db_queries import DataBase
 
 from telebot.types import Message
 
-API_TOKEN = '5932887460:AAGFIyG-f20HF43SyLvQnHgKl6cF2X3xPt4'
+API_TOKEN = ...
 
 bot = telebot.TeleBot(API_TOKEN,skip_pending=True)
 
