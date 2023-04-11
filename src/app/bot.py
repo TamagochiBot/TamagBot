@@ -70,7 +70,7 @@ states = {}
 
 @bot.message_handler(commands=['create_event'])
 def event_creator(message: Message):
-    if db.exists(table='event', id=message.from_user.id):
+    if db.exists(table='event', id=message.from_user.id, column='user_id'):
         bot.send_message(message.chat.id, text='Вы не можете иметь более одного ивента')
     else:
         db.create_event(id=message.from_user.id)
@@ -82,8 +82,8 @@ def event_creator(message: Message):
     func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['name_event',
                                                                                              'event_description',
                                                                                              'event_exp',
-                                                                                             'event_deadline',
-                                                                                             'event_deadline'])
+                                                                                             'event_deadline'
+                                                                                             ])
 def event_creator(message: Message):
     current_state = str(states[message.from_user.id])
     match current_state:
@@ -113,6 +113,14 @@ def event_creator(message: Message):
         case _:
             bot.send_message(message.chat.id, 'LOL')
 
+@bot.message_handler(commands=['event_delete'])
+def event_deleter(message: Message):
+    if db.exists(table='event', id=message.from_user.id):
+        db.delete_event(message.from_user.id)
+        bot.send_message(message.chat.id, 'Ваш ивент удален')
+    else:
+        bot.send_message(message.chat.id, 'У вас не было ивентов')
+
 
 @bot.message_handler(commands=['events'])
 def events(message: Message):
@@ -127,8 +135,9 @@ def events(message: Message):
         values = [r[0] for r in result]
         text = ''
         for i in values:
-            text += f'''Описание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n'''
+            text += f'''Описание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n'''
         bot.send_message(message.chat.id, text=str(text))
+
 
 
 def run_polling():

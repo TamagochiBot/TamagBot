@@ -6,8 +6,8 @@ class DataBase:
         self.__conn = sql.connect(path, detect_types=sql.PARSE_DECLTYPES, check_same_thread=False)
         self.__cursor = self.__conn.cursor()
 
-    def exists(self, table: str, id: int) -> bool:
-        data = self.fetchone(table, id, "id")
+    def exists(self, table: str, id: int, column: str = 'id') -> bool:
+        data = self.fetchone(table, id, column)
 
         if data is None:
             return False
