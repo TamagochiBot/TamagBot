@@ -8,35 +8,38 @@ def init():
 
     # INVENTORY TABLE
     cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             apples INT NOT NULL DEFAULT 5,
             cookies INT NOT NULL DEFAULT 5
             );
     ''')
 
-    #PET TABLE
-    cursor.execute("""CREATE TABLE IF NOT EXISTS pet(
+    #PLAYER TABLE
+    cursor.execute('''CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY,
-            name VARCHAR(40) NOT NULL DEFAULT 'UNKNOWN',
+            balance INTEGER NOT NULL DEFAULT 0,
+            user_name VARCHAR(40) NOT NULL DEFAULT "UNKNOWN",
+            pet_name VARCHAR(40) NOT NULL DEFAULT "UNKNOWN",
             health INTEGER NOT NULL DEFAULT 100,
             strength INTEGER NOT NULL DEFAULT 0,
             weapon_damage INTEGER NOT NULL DEFAULT 0,
             inventory_id INTEGER,
             FOREIGN KEY(inventory_id) REFERENCES inventory(id)
             ON DELETE SET NULL ON UPDATE CASCADE
-    );
-    """)
-
-    #PLAYER TABLE
-    cursor.execute('''CREATE TABLE IF NOT EXISTS player (
-            id INTEGER PRIMARY KEY,
-            balance INTEGER NOT NULL DEFAULT 0,
-            user_name VARCHAR(40) NOT NULL DEFAULT 'UNKNOWN',
-            pet_id INTEGER,
-            FOREIGN KEY(pet_id) REFERENCES pet(id)
-            ON DELETE RESTRICT ON UPDATE CASCADE
             );
     ''')
+
+    #EVENT TABLE 
+    cursor.execute("""CREATE TABLE IF NOT EXISTS event (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            experience INTEGER NOT NULL DEFAULT 0,
+            deadline DATETIME DEFAULT NULL,
+            FOREIGN KEY(user_id) REFERENCES player(id)
+            ON DELETE SET NULL ON UPDATE CASCADE
+            );
+    """ )
 
 if __name__ == "__main__":
     init()
