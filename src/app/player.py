@@ -1,0 +1,12 @@
+from db.db_queries import DataBase
+db = DataBase('testDB.db')
+
+class Player:
+    def __init__(self):
+        self._id = 0
+    
+    def setId(self, id):
+        self._id = id
+    
+    def getBalance(self):
+        return db.getPLayerInfo(self._id)
