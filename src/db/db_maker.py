@@ -18,8 +18,8 @@ def init():
     cursor.execute('''CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY,
             balance INTEGER NOT NULL DEFAULT 0,
-            user_name VARCHAR(40) NOT NULL DEFAULT "UNKNOWN",
-            pet_name VARCHAR(40) NOT NULL DEFAULT "UNKNOWN",
+            user_name VARCHAR(40) NOT NULL DEFAULT 'UNKNOWN',
+            pet_name VARCHAR(40) NOT NULL DEFAULT 'UNKNOWN',
             health INTEGER NOT NULL DEFAULT 100,
             strength INTEGER NOT NULL DEFAULT 0,
             weapon_damage INTEGER NOT NULL DEFAULT 0,

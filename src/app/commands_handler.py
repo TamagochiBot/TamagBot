@@ -1,3 +1,3 @@
 import telebot
 
-from app import bot
+from src.app.bot import bot

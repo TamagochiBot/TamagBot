@@ -1,11 +1,12 @@
 import sqlite3 as sql
 
+
 class DataBase:
-    def __init__(self, path:str)->None:
-        self.__conn = sql.connect(path,detect_types=sql.PARSE_DECLTYPES, check_same_thread = False)
+    def __init__(self, path: str) -> None:
+        self.__conn = sql.connect(path, detect_types=sql.PARSE_DECLTYPES, check_same_thread=False)
         self.__cursor = self.__conn.cursor()
 
-    def exists(self, table:str, id:int) -> bool:
+    def exists(self, table: str, id: int) -> bool:
         data = self.fetchone(table, id, "id")
 
         if data is None:
@@ -13,84 +14,99 @@ class DataBase:
         else:
             return True
 
-    def create_player(self, id:int, user_name:str = "undefined", pet_name:str = "undefined") -> None:
-        #inserting inventory
+    def create_player(self, id: int, user_name: str = "undefined", pet_name: str = "undefined") -> None:
+        # inserting inventory
         inventory_id = self.__cursor.execute("""INSERT INTO inventory DEFAULT VALUES""").lastrowid
 
-        #inserting player
-        self.__cursor.execute("""INSERT INTO player(id,user_name,pet_name,inventory_id) VALUES (?,?,?,?)""", (id, user_name, pet_name, inventory_id,))
+        # inserting player
+        self.__cursor.execute("""INSERT INTO player(id,user_name,pet_name,inventory_id) VALUES (?,?,?,?)""",
+                              (id, user_name, pet_name, inventory_id,))
 
         self.save()
 
-    def create_event(self, id:int, description:str, experience:int, deadline:str) -> None:
-        self.__cursor.execute("""INSERT INTO event(user_id,description,experience,deadline) VALUES (?,?,?,?)""", (id, description, experience, deadline))
- 
+    def create_event(self, id: int, description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
+        self.__cursor.execute("""INSERT INTO event(user_id,description,experience,deadline) VALUES (?,?,?,?)""",
+                              (id, description, experience, deadline))
+
         self.save()
-    
-    def update(self, table:str,id: int, column:str, data) -> None:
+
+    def update(self, table: str, id: int, column: str, data) -> None:
         match table:
             case "player":
                 self.__update_player(id, column, data)
             case "inventory":
                 self.__update_inventory(id, column, data)
             case "event":
-                self.__update_event(id,column,data)
+                self.__update_event(id, column, data)
             case _:
                 raise ValueError(f"Table does not exist")
-    
-    def fetchone(self, table:str, id:int, column:str):
+
+    def fetchone(self, table: str, id: int, column: str):
         match table:
             case "player":
                 return self.__fetchone_player(id, column)
             case "inventory":
                 return self.__fetchone_inventory(id, column)
             case "event":
-                return self.__fetchone_event(id,column)
+                return self.__fetchone_event(id, column)
             case _:
                 raise ValueError(f"Table does not exist")
-            
+
+    def count_rows(self, table_name: str) -> int:
+        # Получаем количество записей в таблице
+        data = self.__cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+        count = data.fetchone()[0]
+        # Возвращаем количество записей
+        return count
+
     def save(self) -> None:
         self.__conn.commit()
 
-    def delete_event(self,id:int):
+    def delete_event(self, id: int):
         self.__cursor.execute(f"""DELETE FROM event WHERE user_id = {id}""")
         self.save()
 
-    def __update_event(self, id:int, column:str, data) -> None:
+    def __update_event(self, id: int, column: str, data) -> None:
         if type(data) is str:
-            self.__cursor.execute(f"""UPDATE event SET {column} = \"{data}\" WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
+            self.__cursor.execute(
+                f"""UPDATE event SET {column} = \"{data}\" WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
         else:
-            self.__cursor.execute(f"""UPDATE event SET {column} = {data} WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
+            self.__cursor.execute(
+                f"""UPDATE event SET {column} = {data} WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
 
-    def __update_player(self,id:int, column:str, data) -> None:
+    def __update_player(self, id: int, column: str, data) -> None:
         if type(data) is str:
             self.__cursor.execute(f"""UPDATE player SET {column} = \"{data}\" WHERE id = {id}""")
         else:
             self.__cursor.execute(f"""UPDATE player SET {column} = {data} WHERE id = {id}""")
 
-    def __update_inventory(self,id:int, column:str, data) -> None:
+    def __update_inventory(self, id: int, column: str, data) -> None:
         if type(data) is str:
-            self.__cursor.execute(f"""UPDATE inventory SET {column} = \"{data}\" WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
+            self.__cursor.execute(
+                f"""UPDATE inventory SET {column} = \"{data}\" WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
         else:
-            self.__cursor.execute(f"""UPDATE inventory SET {column} = {data} WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
+            self.__cursor.execute(
+                f"""UPDATE inventory SET {column} = {data} WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
 
-    def __fetchone_event(self, id:int, column:str):
-        data = self.__cursor.execute(f"""SELECT {column} FROM event WHERE user_id=(SELECT id FROM player WHERE id = {id})""").fetchone()
-       
+    def __fetchone_event(self, id: int, column: str):
+        data = self.__cursor.execute(
+            f"""SELECT {column} FROM event WHERE user_id=(SELECT id FROM player WHERE id = {id})""").fetchone()
+
         if data is None:
             return None
         else:
             return data[0]
 
-    def __fetchone_inventory(self,id:int,column:str):
-        data = self.__cursor.execute(f"""SELECT {column} FROM inventory WHERE id=(SELECT inventory_id FROM player WHERE id = {id})""").fetchone()
-       
+    def __fetchone_inventory(self, id: int, column: str):
+        data = self.__cursor.execute(
+            f"""SELECT {column} FROM inventory WHERE id=(SELECT inventory_id FROM player WHERE id = {id})""").fetchone()
+
         if data is None:
             return None
         else:
             return data[0]
 
-    def __fetchone_player(self,id:int,column:str):
+    def __fetchone_player(self, id: int, column: str):
         data = self.__cursor.execute(f"""SELECT {column} FROM player WHERE id={id}""").fetchone()
 
         if data is None:
