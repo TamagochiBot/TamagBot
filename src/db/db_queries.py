@@ -12,8 +12,8 @@ class DataBase:
         else:
             return False
     
-    def getPLayerInfo(self, id:int):
-        return self.__cursor.execute("SELECT * FROM player WHERE id=?", (id, )).fetchone()
+    def getPLayerBalance(self, id:int):
+        return self.__cursor.execute(f"SELECT balance FROM player WHERE id={id}").fetchone()[0]
 
 
     def insert(self, id:int, pet_name:str = "undefined") -> None:
