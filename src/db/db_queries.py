@@ -34,7 +34,7 @@ class DataBase:
         """
         Inserts an event in the "event" table
         """
-        self.__cursor.execute("""INSERT INTO event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?)""",
+        self.__cursor.execute("""INSERT INTO event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?)""",
                               (id, event_name, description, experience, deadline))
 
         self.save()
