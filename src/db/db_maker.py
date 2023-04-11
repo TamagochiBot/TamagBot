@@ -29,9 +29,10 @@ def init():
             );
     ''')
 
-    #EVENT TABLE 
+    # UNREGULAR EVENT TABLE 
     cursor.execute("""CREATE TABLE IF NOT EXISTS event (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_name VARCHAR(40) NOT NULL DEFAULT '',
             user_id INTEGER NOT NULL,
             description TEXT NOT NULL DEFAULT '',
             experience INTEGER NOT NULL DEFAULT 0,
