@@ -6,7 +6,7 @@ class DataBase:
         self.__conn = sql.connect(path, detect_types=sql.PARSE_DECLTYPES, check_same_thread=False)
         self.__cursor = self.__conn.cursor()
 
-    def exists(self, table: str, id: int, column:str) -> bool:
+    def exists(self, table: str, id: int, column:str = 'id') -> bool:
         """
         Checks if there is a record in the table
         """
@@ -34,7 +34,7 @@ class DataBase:
         """
         Inserts an event in the "event" table
         """
-        self.__cursor.execute("""INSERT INTO event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?)""",
+        self.__cursor.execute("""INSERT INTO event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?)""",
                               (id, event_name, description, experience, deadline))
 
         self.save()
@@ -93,21 +93,21 @@ class DataBase:
     def __update_event(self, id: int, column: str, data) -> None:
         if type(data) is str:
             self.__cursor.execute(
-                f"""UPDATE event SET {column} = \"{data}\" WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
+                f"""UPDATE event SET {column} = \'{data}\' WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
         else:
             self.__cursor.execute(
                 f"""UPDATE event SET {column} = {data} WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
 
     def __update_player(self, id: int, column: str, data) -> None:
         if type(data) is str:
-            self.__cursor.execute(f"""UPDATE player SET {column} = \"{data}\" WHERE id = {id}""")
+            self.__cursor.execute(f"""UPDATE player SET {column} = \'{data}\' WHERE id = {id}""")
         else:
             self.__cursor.execute(f"""UPDATE player SET {column} = {data} WHERE id = {id}""")
 
     def __update_inventory(self, id: int, column: str, data) -> None:
         if type(data) is str:
             self.__cursor.execute(
-                f"""UPDATE inventory SET {column} = \"{data}\" WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
+                f"""UPDATE inventory SET {column} = \'{data}\' WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
         else:
             self.__cursor.execute(
                 f"""UPDATE inventory SET {column} = {data} WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
