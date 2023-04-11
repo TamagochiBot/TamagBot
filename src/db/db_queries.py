@@ -6,8 +6,11 @@ class DataBase:
         self.__conn = sql.connect(path, detect_types=sql.PARSE_DECLTYPES, check_same_thread=False)
         self.__cursor = self.__conn.cursor()
 
-    def exists(self, table: str, id: int) -> bool:
-        data = self.fetchone(table, id, "id")
+    def exists(self, table: str, id: int, column:str) -> bool:
+        """
+        Checks if there is a record in the table
+        """
+        data = self.fetchone(table, id, column)
 
         if data is None:
             return False
@@ -15,6 +18,9 @@ class DataBase:
             return True
 
     def create_player(self, id: int, user_name: str = "undefined", pet_name: str = "undefined") -> None:
+        """
+        Inserts a player in the "player" table
+        """
         # inserting inventory
         inventory_id = self.__cursor.execute("""INSERT INTO inventory DEFAULT VALUES""").lastrowid
 
@@ -24,13 +30,20 @@ class DataBase:
 
         self.save()
 
-    def create_event(self, id: int, description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
-        self.__cursor.execute("""INSERT INTO event(user_id,description,experience,deadline) VALUES (?,?,?,?)""",
-                              (id, description, experience, deadline))
+    def create_event(self, id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
+        """
+        Inserts an event in the "event" table
+        """
+        self.__cursor.execute("""INSERT INTO event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?)""",
+                              (id, event_name, description, experience, deadline))
 
         self.save()
 
+    # 
     def update(self, table: str, id: int, column: str, data) -> None:
+        '''
+        Updates a single column record in the table
+        '''
         match table:
             case "player":
                 self.__update_player(id, column, data)
@@ -42,6 +55,9 @@ class DataBase:
                 raise ValueError(f"Table does not exist")
 
     def fetchone(self, table: str, id: int, column: str):
+        '''
+        Fetches one record from the table
+        '''
         match table:
             case "player":
                 return self.__fetchone_player(id, column)
@@ -53,16 +69,24 @@ class DataBase:
                 raise ValueError(f"Table does not exist")
 
     def count_rows(self, table_name: str) -> int:
-        # Получаем количество записей в таблице
+        '''
+        Counts the number of table rows
+        '''
         data = self.__cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
         count = data.fetchone()[0]
-        # Возвращаем количество записей
+
         return count
 
     def save(self) -> None:
+        """
+        Commits changes
+        """
         self.__conn.commit()
 
     def delete_event(self, id: int):
+        """
+        Deletes event from the "event" table
+        """
         self.__cursor.execute(f"""DELETE FROM event WHERE user_id = {id}""")
         self.save()
 
