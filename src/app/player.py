@@ -9,4 +9,4 @@ class Player:
         self._id = id
     
     def getBalance(self):
-        return db.getPLayerInfo(self._id)
+        return db.getPLayerBalance(self._id)
