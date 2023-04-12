@@ -118,25 +118,13 @@ def event_editor(message: Message):
                 states[curret_state] = 'edit_smth'
                 bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=...)
 
-
-@bot.ca
-
-
 @bot.message_handler(commands=['events'])
-def events(message: Message):
-    with sqlite3.connect('TestDB.db') as datab:
-        # cur = db.cursor()
-        # cur.execute('''SELECT Count(*) FROM TABLE event''')
-        c = datab.cursor()
-
-        # Выполняем запрос к таблице и получаем список значений столбца
-        c.execute("SELECT user_id FROM event")
-        result = c.fetchall()
-        values = [r[0] for r in result]
-        text = 'Списко ивентов\n'
-        for i in values:
-            text += f'''\nИвент: {db.fetchone(table='event', id=i, column='event_name')}\nОписание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n'''
-        bot.send_message(message.chat.id, text=str(text))
+def events(message: Message):      
+    lst_of_events = db.fetchall("event") 
+    text = 'Списко ивентов\n'
+    for event in lst_of_events:
+        text += f'''\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
+    bot.send_message(message.chat.id, text=str(text))
 
 @bot.message_handler(
     func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['name_event',

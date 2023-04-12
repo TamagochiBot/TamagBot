@@ -67,6 +67,13 @@ class DataBase:
                 return self.__fetchone_event(id, column)
             case _:
                 raise ValueError(f"Table does not exist")
+            
+    def fetchall(self, table:str) -> list:
+        """
+        Fetches all records from the table
+        """
+        lst = self.__cursor.execute(f"""SELECT * FROM {table}""").fetchall()
+        return lst
 
     def count_rows(self, table_name: str) -> int:
         '''
