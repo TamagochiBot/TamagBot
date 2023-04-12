@@ -1,5 +1,4 @@
 import json
-import sqlite3
 
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
@@ -32,6 +31,14 @@ def gen_markup() -> telebot.types.InlineKeyboardMarkup:
     markup.row_width = 2
     markup.add(InlineKeyboardButton("Yes", callback_data="cb_yes"),
                InlineKeyboardButton("No", callback_data="cb_no"))
+    return markup
+
+#Создание KeyBoard кнопок
+def MarkupFromList(listOfButtons):
+    markup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    for buttonName in listOfButtons:
+        btn=telebot.types.KeyboardButton(buttonName)
+        markup.add(btn)
     return markup
 
 
@@ -103,20 +110,65 @@ def event_edit(message: Message):
     if db.exists(table='event',id=message.from_user.id, column='user_id'):
         i = message.from_user.id
         bot.send_message(message.chat.id, text=f'''\nИвент: {db.fetchone(table='event', id=i, column='event_name')}\nОписание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n''')
-        bot.send_message(message.chat.id, 'Вы хотите его отредактировать?', reply_markup=gen_markup())
-        states[message.from_user.id] = 'edit_event_yes_or_not'
+        bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
+                                                                                                  'Описание',
+                                                                                                  'Количество опыта',
+                                                                                                  'Дедалйн']))
+        states[message.from_user.id] = 'edit_smth'
     else:
         bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
 
 
-@bot.message_handler(func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['edit_event_yes_or_not'])
-def event_editor(message: Message):
-    curret_state = states[message.from_user.id]
-    match curret_state:
-        case 'edit_event_yes_or_not':
-            if message.text=='Да':
-                states[curret_state] = 'edit_smth'
-                bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=...)
+
+@bot.message_handler(func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['edit_smth',
+                                                                                                              'edit_name',
+                                                                                                              'edit_description',
+                                                                                                              'edit_exp',
+                                                                                                              'edit_deadline'
+                                                                                                              ])
+def event_redactor(message: Message):
+    current_state = str(states[message.from_user.id])
+    empty_markup = telebot.types.ReplyKeyboardRemove()
+    match current_state:
+        case 'edit_smth':
+            match message.text:
+                case 'Название':
+                    states[message.from_user.id] = 'edit_name'
+                    bot.send_message(message.chat.id, 'Я вас слушаю...', reply_markup=empty_markup)
+                case 'Описание':
+                    states[message.from_user.id] = 'edit_description'
+                    bot.send_message(message.chat.id, 'Я вас слушаю...', reply_markup=empty_markup)
+                case 'Колчиество опыта':
+                    states[message.from_user.id] = 'edit_exp'
+                    bot.send_message(message.chat.id, 'Я вас слушаю...', reply_markup=empty_markup)
+                case 'Дедалйн':
+                    states[message.from_user.id] = 'edit_deadline'
+                    bot.send_message(message.chat.id, 'Я вас слушаю...', reply_markup=empty_markup)
+                case _ :
+                    bot.send_message(message.chat.id, 'Попробуй еще раз')
+        case 'edit_name':
+            db.update(table='event',id=message.from_user.id, column='event_name',data=message.text)
+            bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
+            db.save()
+            del states[message.from_user.id]
+        case 'edit_description':
+            db.update(table='event', id=message.from_user.id, column='description', data=message.text)
+            bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
+            db.save()
+            del states[message.from_user.id]
+        case 'edit_exp':
+            db.update(table='event', id=message.from_user.id, column='experience', data=int(message.text))
+            bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
+            db.save()
+            del states[message.from_user.id]
+        case 'edit_deadline':
+            db.update(table='event', id=message.from_user.id, column='deadline', data=message.text)
+            bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
+            db.save()
+            del states[message.from_user.id]
+        case _:
+            bot.send_message(message.chat.id, 'Что то пошло не так')
+
 
 @bot.message_handler(commands=['events'])
 def events(message: Message):      
