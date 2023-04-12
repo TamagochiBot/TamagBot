@@ -27,7 +27,7 @@ def registration(message: Message):
 
 
 # Создание inline кнопок
-def gen_markup():
+def gen_markup() -> telebot.types.InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup()
     markup.row_width = 2
     markup.add(InlineKeyboardButton("Yes", callback_data="cb_yes"),
@@ -43,6 +43,13 @@ def start_message(message: Message):
         bot.send_message(message.chat.id, """Похоже, ты ещё не зарегестрирован, минуту...""")
         bot.send_message(message.chat.id, """Как будут звать твоего питомца?""")
         bot.register_next_step_handler(message, registration)
+
+@bot.message_handler(commands=['cancel'])
+def cancel(message: Message):
+    if message.from_user.id in states:
+        del states[message.from_user.id]
+    db.save()
+    bot.send_message(message.chat.id, 'Отмена')
 
 
 @bot.message_handler(commands=['balance'])
@@ -66,9 +73,10 @@ def message_handler(message):
 
 states = {}
 
+
 @bot.message_handler(commands=['debug'])
 def debug(message: Message):
-    db.update(table='player',id = message.from_user.id,column='pet_name',data='Edic')
+    db.update(table='player', id=message.from_user.id, column='pet_name', data='Edic')
     db.save()
 
 
@@ -81,6 +89,7 @@ def event_creator(message: Message):
         bot.send_message(message.chat.id, 'Напиши имя ивента')
         states[message.from_user.id] = 'event_name'
 
+
 @bot.message_handler(commands=['event_delete'])
 def event_deleter(message: Message):
     if db.exists(table='event', id=message.from_user.id, column='user_id'):
@@ -88,6 +97,46 @@ def event_deleter(message: Message):
         bot.send_message(message.chat.id, 'Ваш ивент удален')
     else:
         bot.send_message(message.chat.id, 'У вас не было ивентов')
+
+@bot.message_handler(commands=['event_edit'])
+def event_edit(message: Message):
+    if db.exists(table='event',id=message.from_user.id, column='user_id'):
+        i = message.from_user.id
+        bot.send_message(message.chat.id, text=f'''\nИвент: {db.fetchone(table='event', id=i, column='event_name')}\nОписание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n''')
+        bot.send_message(message.chat.id, 'Вы хотите его отредактировать?', reply_markup=gen_markup())
+        states[message.from_user.id] = 'edit_event_yes_or_not'
+    else:
+        bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
+
+
+@bot.message_handler(func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['edit_event_yes_or_not'])
+def event_editor(message: Message):
+    curret_state = states[message.from_user.id]
+    match curret_state:
+        case 'edit_event_yes_or_not':
+            if message.text=='Да':
+                states[curret_state] = 'edit_smth'
+                bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=...)
+
+
+@bot.ca
+
+
+@bot.message_handler(commands=['events'])
+def events(message: Message):
+    with sqlite3.connect('TestDB.db') as datab:
+        # cur = db.cursor()
+        # cur.execute('''SELECT Count(*) FROM TABLE event''')
+        c = datab.cursor()
+
+        # Выполняем запрос к таблице и получаем список значений столбца
+        c.execute("SELECT user_id FROM event")
+        result = c.fetchall()
+        values = [r[0] for r in result]
+        text = 'Списко ивентов\n'
+        for i in values:
+            text += f'''\nИвент: {db.fetchone(table='event', id=i, column='event_name')}\nОписание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n'''
+        bot.send_message(message.chat.id, text=str(text))
 
 @bot.message_handler(
     func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['name_event',
@@ -108,9 +157,13 @@ def event_creator(message: Message):
             bot.send_message(message.chat.id, 'Выберите количество опыта за выполнение')
             states[message.from_user.id] = 'event_exp'
         case 'event_exp':
-            db.update(table='event', column='experience', id=message.from_user.id, data=int(message.text))
-            bot.send_message(message.chat.id, 'Укажите дедлайн')
-            states[message.from_user.id] = 'event_deadline'
+            if str.isdigit(message.text):
+                db.update(table='event', column='experience', id=message.from_user.id, data=int(message.text))
+                bot.send_message(message.chat.id, 'Укажите дедлайн')
+                states[message.from_user.id] = 'event_deadline'
+            else:
+                bot.send_message(message.chat.id, 'Введите число')
+                states[message.from_user.id] = 'event_exp'
         case 'event_deadline':
             db.update(table='event', column='deadline', id=message.from_user.id, data=message.text)
             db.save()
@@ -118,27 +171,6 @@ def event_creator(message: Message):
             del states[message.from_user.id]
         case _:
             bot.send_message(message.chat.id, 'LOL')
-
-
-
-
-@bot.message_handler(commands=['events'])
-def events(message: Message):
-    with sqlite3.connect('TestDB.db') as datab:
-        # cur = db.cursor()
-        # cur.execute('''SELECT Count(*) FROM TABLE event''')
-        c = datab.cursor()
-
-        # Выполняем запрос к таблице и получаем список значений столбца
-        c.execute("SELECT user_id FROM event")
-        result = c.fetchall()
-        values = [r[0] for r in result]
-        text = 'Списко ивентов\n'
-        for i in values:
-            text += f'''\nИвент: {db.fetchone(table='event', id=i, column='event_name')}\nОписание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n'''
-        bot.send_message(message.chat.id, text=str(text))
-
-
 
 def run_polling():
     print("Bot has been started...")
