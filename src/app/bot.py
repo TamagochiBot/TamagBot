@@ -106,7 +106,10 @@ def event_deleter(message: Message):
 def event_edit(message: Message):
     if db.exists(table='event',id=message.from_user.id, column='user_id'):
         i = message.from_user.id
-        bot.send_message(message.chat.id, text=f'''\nИвент: {db.fetchone(table='event', id=i, column='event_name')}\nОписание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n''')
+        bot.send_message(message.chat.id, text=f'\nИвент: {db.fetchone(table="event", id=i, column="event_name")}\n'
+                                               f'Описание: {db.fetchone(table="event", id=i, column="description")}\n'
+                                               f'Опыт: {db.fetchone(table="event", id=i, column="experience")}\n'
+                                               f'Дедлайн: {db.fetchone(table="event", id=i, column="deadline")}\n\n')
         bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
                                                                                                   'Описание',
                                                                                                   'Количество опыта',
@@ -117,12 +120,13 @@ def event_edit(message: Message):
 
 
 
-@bot.message_handler(func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['edit_smth',
-                                                                                                              'edit_name',
-                                                                                                              'edit_description',
-                                                                                                              'edit_exp',
-                                                                                                              'edit_deadline'
-                                                                                                              ])
+@bot.message_handler(func=lambda message: message.from_user.id in states and
+                                          states[message.from_user.id] in ['edit_smth',
+                                                                           'edit_name',
+                                                                           'edit_description',
+                                                                           'edit_exp',
+                                                                           'edit_deadline'
+                                                                           ])
 def event_redactor(message: Message):
     current_state = str(states[message.from_user.id])
     empty_markup = telebot.types.ReplyKeyboardRemove()
