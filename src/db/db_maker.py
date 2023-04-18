@@ -1,6 +1,5 @@
 import sqlite3 as sql
 
-
 def init():
     connect = sql.connect("testDB.db")
 
@@ -38,9 +37,10 @@ def init():
             );
     ''')
 
-    #EVENT TABLE 
+    # UNREGULAR EVENT TABLE 
     cursor.execute("""CREATE TABLE IF NOT EXISTS event (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_name VARCHAR(40) NOT NULL DEFAULT '',
             user_id INTEGER NOT NULL,
             description TEXT NOT NULL DEFAULT '',
             experience INTEGER NOT NULL DEFAULT 0,
@@ -48,18 +48,7 @@ def init():
             FOREIGN KEY(user_id) REFERENCES player(id)
             ON DELETE SET NULL ON UPDATE CASCADE
             );
-    """)
-
-    #RECURRENT EVENT TABLE
-    cursor.execute("""CREATE TABLE IF NOT EXISTS recurrent_event (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                description TEXT NOT NULL DEFAULT '',
-                experience INTEGER NOT NULL DEFAULT 0,
-                time DATETIME DEFAULT NULL,
-                ON DELETE SET NULL ON UPDATE CASCADE
-                );
-        """)
-
+    """ )
 
 if __name__ == "__main__":
     init()
