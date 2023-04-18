@@ -1,16 +1,13 @@
 import json
-import time
 
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 
-import schedule
-
-from TamagBot.src.db.db_queries import DataBase
-from TamagBot.src.app.player import Player
+from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
+from src.app.player import Player
 
 player_info = Player()
 
@@ -38,9 +35,9 @@ def gen_markup() -> telebot.types.InlineKeyboardMarkup:
 
 #Создание KeyBoard кнопок
 def MarkupFromList(listOfButtons):
-    markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup=telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
     for buttonName in listOfButtons:
-        btn = telebot.types.KeyboardButton(buttonName)
+        btn=telebot.types.KeyboardButton(buttonName)
         markup.add(btn)
     return markup
 
@@ -51,7 +48,6 @@ def start_message(message: Message):
         bot.send_message(message.chat.id, '''Ты уже зарегестрирован в боте.''')
     else:
         bot.send_message(message.chat.id, """Похоже, ты ещё не зарегестрирован, минуту...""")
-        time.sleep(2)
         bot.send_message(message.chat.id, """Как будут звать твоего питомца?""")
         bot.register_next_step_handler(message, registration)
 
@@ -91,17 +87,6 @@ def debug(message: Message):
     db.save()
 
 
-#
-# Events
-#
-
-@bot.message_handler(commands=['recurrent_create_event'])
-def event_creator(message: Message):
-    db.create_event(id=message.from_user.id)
-    bot.send_message(message.chat.id, 'Напиши имя ивента')
-    states[message.from_user.id] = 'event_name'
-
-
 @bot.message_handler(commands=['create_event'])
 def event_creator(message: Message):
     if db.exists(table='event', id=message.from_user.id, column='user_id'):
@@ -120,10 +105,9 @@ def event_deleter(message: Message):
     else:
         bot.send_message(message.chat.id, 'У вас не было ивентов')
 
-
 @bot.message_handler(commands=['event_edit'])
 def event_edit(message: Message):
-    if db.exists(table='event', id=message.from_user.id, column='user_id'):
+    if db.exists(table='event',id=message.from_user.id, column='user_id'):
         i = message.from_user.id
         bot.send_message(message.chat.id, text=f'''\nИвент: {db.fetchone(table='event', id=i, column='event_name')}\nОписание: {db.fetchone(table='event', id=i, column='description')} \nОпыт: {db.fetchone(table='event', id=i, column='experience')} \nДедлайн: {db.fetchone(table='event', id=i, column='deadline')}\n\n''')
         bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
@@ -228,50 +212,6 @@ def event_creator(message: Message):
         case _:
             bot.send_message(message.chat.id, 'LOL')
 
-
-#
-# End of Event
-#
-
 def run_polling():
     print("Bot has been started...")
     bot.polling(skip_pending=True)
-
-
-#
-# Funny commands
-#
-
-@bot.message_handler(commands=['Обнять'])
-def message_handler(message: Message):
-    bot.send_message(message.chat.id, message.from_user.username + ' обнял ' + Message)
-
-
-@bot.message_handler(commands=['Укусить'])
-def message_handler(message: Message):
-    bot.send_message(message.chat.id, message.from_user.username + ' укусил ' + Message)
-
-
-@bot.message_handler(commands=['Поцеловать'])
-def message_handler(message: Message):
-    bot.send_message(message.chat.id, message.from_user.username + ' поцеловал ' + Message)
-
-
-@bot.message_handler(commands=['Ударить тапком'])
-def message_handler(message: Message):
-    bot.send_message(message.chat.id, message.from_user.username + ' ударил тапком ' + Message)
-
-
-@bot.message_handler(commands=['Обнять'])
-def message_handler(message: Message):
-    bot.send_message(message.chat.id, message.from_user.username + ' обнял ' + Message)
-
-
-@bot.message_handler(commands=['кто'])
-def message_handler(message: Message):
-    bot.send_message('Несомненно, ' + Message + ' - ' + '')
-
-
-#
-# End of Funny commands
-#
