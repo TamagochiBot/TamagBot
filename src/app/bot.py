@@ -217,26 +217,27 @@ def event_creator(message: Message):
     event_type = str(types[message.from_user.id])
 
     table = "event" if event_type == "unregular" else "regular_event"
+    id = message.from_user.id if table == "event" else last_regular_event
 
     match current_state:
         case 'event_name':
-            db.update(table=table, column='event_name', id=(message.from_user.id if table == "event" else last_regular_event), data=message.text)
+            db.update(table=table, column='event_name', id=id, data=message.text)
             bot.send_message(message.chat.id, 'Напишите описание ивента')
             states[message.from_user.id] = 'event_description'
         case 'event_description':
-            db.update(table=table, column='description', id=(message.from_user.id if table == "event" else last_regular_event), data=message.text)
+            db.update(table=table, column='description', id=id, data=message.text)
             bot.send_message(message.chat.id, 'Выберите количество опыта за выполнение')
             states[message.from_user.id] = 'event_exp'
         case 'event_exp':
             if str.isdigit(message.text):
-                db.update(table=table, column='experience', id=(message.from_user.id if table == "event" else last_regular_event), data=int(message.text))
+                db.update(table=table, column='experience', id=id, data=int(message.text))
                 bot.send_message(message.chat.id, 'Укажите дедлайн')
                 states[message.from_user.id] = 'event_deadline'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
                 states[message.from_user.id] = 'event_exp'
         case 'event_deadline':
-            db.update(table=table, column='deadline', id=(message.from_user.id if table == "event" else last_regular_event), data=message.text)
+            db.update(table=table, column='deadline', id=id, data=message.text)
             db.save()
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
