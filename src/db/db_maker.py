@@ -17,6 +17,7 @@ def init():
     #PLAYER TABLE
     cursor.execute('''CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY,
+            is_admin BOOLEAN NOT NULL DEFAULT 0,
             balance INTEGER NOT NULL DEFAULT 0,
             level INTEGER NOT NULL DEFAULT 1,
             experience INTEGER NOT NULL DEFAULT 0,
@@ -45,6 +46,20 @@ def init():
             description TEXT NOT NULL DEFAULT '',
             experience INTEGER NOT NULL DEFAULT 0,
             deadline DATETIME DEFAULT NULL,
+            FOREIGN KEY(user_id) REFERENCES player(id)
+            ON DELETE SET NULL ON UPDATE CASCADE
+            );
+    """ )
+
+     # REGULAR EVENT TABLE 
+    cursor.execute("""CREATE TABLE IF NOT EXISTS regular_event (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_name VARCHAR(40) NOT NULL DEFAULT '',
+            user_id INTEGER NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            experience INTEGER NOT NULL DEFAULT 0,
+            deadline DATETIME DEFAULT NULL,
+            list_of_players TEXT NOT NULL DEFAULT '',
             FOREIGN KEY(user_id) REFERENCES player(id)
             ON DELETE SET NULL ON UPDATE CASCADE
             );

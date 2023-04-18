@@ -17,7 +17,7 @@ class DataBase:
         else:
             return True
 
-    def create_player(self, id: int, user_name: str = "undefined", pet_name: str = "undefined") -> None:
+    def create_player(self, id: int, user_name: str = "undefined", pet_name: str = "undefined", is_admin:bool = False) -> None:
         """
         Inserts a player in the "player" table
         """
@@ -25,10 +25,13 @@ class DataBase:
         inventory_id = self.__cursor.execute("""INSERT INTO inventory DEFAULT VALUES""").lastrowid
 
         # inserting player
-        self.__cursor.execute("""INSERT INTO player(id,user_name,pet_name,inventory_id) VALUES (?,?,?,?)""",
-                              (id, user_name, pet_name, inventory_id,))
+        self.__cursor.execute("""INSERT INTO player(id,is_admin,user_name,pet_name,inventory_id) VALUES (?,?,?,?,?)""",
+                              (id, is_admin, user_name, pet_name, inventory_id,))
 
         self.save()
+
+    def is_admin(self, id:int) -> bool:
+        return bool(self.__fetchone_player(id,"is_admin"))
 
     def create_event(self, id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
         """
@@ -39,8 +42,14 @@ class DataBase:
 
         self.save()
 
-    # 
-    def update(self, table: str, id: int, column: str, data) -> None:
+    def create_regular_event(self, id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
+        """
+        Inserts a regular event in the "regular_event" table
+        """
+        self.__cursor.execute("""INSERT INTO regular_event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?)""",
+                              (id, event_name, description, experience, deadline))
+
+    def update(self, table: str, id:int, column: str, data) -> None:
         '''
         Updates a single column record in the table
         '''
@@ -51,6 +60,8 @@ class DataBase:
                 self.__update_inventory(id, column, data)
             case "event":
                 self.__update_event(id, column, data)
+            case "regular_event":
+                self.__update_regular_event(id,column,data)
             case _:
                 raise ValueError(f"Table does not exist")
 
@@ -105,6 +116,12 @@ class DataBase:
             self.__cursor.execute(
                 f"""UPDATE event SET {column} = {data} WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
 
+    def __update_regular_event(self,id: int, column:str, data):
+        if type(data) is str:
+            self.__cursor.execute(f"""UPDATE regular_event SET {column} = \'{data}\' WHERE id = {id}""")
+        else:
+            self.__cursor.execute(f"""UPDATE regular_event SET {column} = {data} WHERE id = {id}""")
+
     def __update_player(self, id: int, column: str, data) -> None:
         if type(data) is str:
             self.__cursor.execute(f"""UPDATE player SET {column} = \'{data}\' WHERE id = {id}""")
@@ -144,3 +161,4 @@ class DataBase:
             return None
         else:
             return data[0]
+        

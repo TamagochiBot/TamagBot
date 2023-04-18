@@ -1,4 +1,4 @@
-from src.db.db_queries import DataBase
+from db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
