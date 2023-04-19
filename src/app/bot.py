@@ -1,15 +1,16 @@
 import os
 
-import schedule
 
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
 
-from db.db_queries import DataBase
+from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
-from app.player import Player
+from src.app.fun.funny import *
+
+from src.app.player import Player
 
 player_info = Player()
 
@@ -17,8 +18,7 @@ bot = telebot.TeleBot(os.environ["TOKEN"])
 
 states = {}
 types = {}
-last_regular_event = int(db.count_rows("regular_event"))
-print(last_regular_event)
+
 
 # Регистрация в БД
 def registration(message: Message):
@@ -46,8 +46,10 @@ def MarkupFromList(listOfButtons):
 
 @bot.message_handler(commands=['start'])
 def start_message(message: Message):
+    bot.send_message(message.chat.id, 'Привет, я ПопугБот!')
+    bot.send_message(message.chat.id, 'Давай ка посмотрим, есть ли у тебя попуг 🦜')
     if db.exists(table='player', id=message.from_user.id):
-        bot.send_message(message.chat.id, '''Ты уже зарегестрирован в боте.''')
+        bot.send_message(message.chat.id, '''У тебя ''')
     else:
         bot.send_message(message.chat.id, """Похоже, ты ещё не зарегестрирован, минуту...""")
         bot.send_message(message.chat.id, """Как будут звать твоего питомца?""")
@@ -79,12 +81,10 @@ def callback_query(call):
 def message_handler(message):
     bot.send_message(message.chat.id, "Yes/no?", reply_markup=gen_markup())
 
-''' че за нах?
 @bot.message_handler(commands=['debug'])
 def debug(message: Message):
     db.update(table='player', id=message.from_user.id, column='pet_name', data='Edic')
     db.save()
-'''
 
 @bot.message_handler(commands=['create_event'])
 def event_creator(message: Message):
@@ -191,7 +191,7 @@ def event_redactor(message: Message):
 @bot.message_handler(commands=['events'])
 def events(message: Message):
     lst_of_events = db.fetchall("regular_event")
-    text = 'Списко ивентов\nРегулярные:\n'
+    text = 'Список ивентов\nРегулярные:\n'
 
     for event in lst_of_events:
         text += f'''\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
@@ -217,32 +217,42 @@ def event_creator(message: Message):
     event_type = str(types[message.from_user.id])
 
     table = "event" if event_type == "unregular" else "regular_event"
-    id = message.from_user.id if table == "event" else last_regular_event
+    user_id = message.from_user.id if table == "event" else last_regular_event
 
     match current_state:
         case 'event_name':
-            db.update(table=table, column='event_name', id=id, data=message.text)
+            db.update(table=table, column='event_name', id=user_id, data=message.text)
             bot.send_message(message.chat.id, 'Напишите описание ивента')
             states[message.from_user.id] = 'event_description'
         case 'event_description':
-            db.update(table=table, column='description', id=id, data=message.text)
+            db.update(table=table, column='description', id=user_id, data=message.text)
             bot.send_message(message.chat.id, 'Выберите количество опыта за выполнение')
             states[message.from_user.id] = 'event_exp'
         case 'event_exp':
             if str.isdigit(message.text):
-                db.update(table=table, column='experience', id=id, data=int(message.text))
+                db.update(table=table, column='experience', id=user_id, data=int(message.text))
                 bot.send_message(message.chat.id, 'Укажите дедлайн')
                 states[message.from_user.id] = 'event_deadline'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
                 states[message.from_user.id] = 'event_exp'
         case 'event_deadline':
-            db.update(table=table, column='deadline', id=id, data=message.text)
+            db.update(table=table, column='deadline', id=user_id, data=message.text)
             db.save()
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
         case _:
             bot.send_message(message.chat.id, 'LOL')
+
+
+
+@bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Ударить','ударить'])
+def kick_smb(message: Message):
+    # bot.send_message(message.chat.id, text=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
+    photo = open('/Users/romburunduk/Downloads/kandinsky-download-1681909931506.png','rb')
+    bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
+
+
 
 def run_polling():
     print("Bot has been started...")
