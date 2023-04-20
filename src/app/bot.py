@@ -4,7 +4,7 @@ import random
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
 
-from src.app.Images.images import CreatePetImage
+# from src.app.Images.images import CreatePetImage
 from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
