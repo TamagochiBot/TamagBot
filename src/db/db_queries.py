@@ -76,6 +76,8 @@ class DataBase:
                 return self.__fetchone_inventory(id, column)
             case "event":
                 return self.__fetchone_event(id, column)
+            case "regular_event":
+                return self.__fetchone_regular(id,column)
             case _:
                 raise ValueError(f"Table does not exist")
             
@@ -106,6 +108,13 @@ class DataBase:
         Deletes event from the "event" table
         """
         self.__cursor.execute(f"""DELETE FROM event WHERE user_id = {id}""")
+        self.save()
+    
+    def delete_regular(self, id: int):
+        """
+        Deletes event from the "regular_event" table
+        """
+        self.__cursor.execute(f"""DELETE FROM regular_event WHERE id = {id}""")
         self.save()
 
     def __update_event(self, id: int, column: str, data) -> None:
@@ -139,6 +148,15 @@ class DataBase:
     def __fetchone_event(self, id: int, column: str):
         data = self.__cursor.execute(
             f"""SELECT {column} FROM event WHERE user_id=(SELECT id FROM player WHERE id = {id})""").fetchone()
+
+        if data is None:
+            return None
+        else:
+            return data[0]
+        
+    def __fetchone_regular(self, id: int, column: str):
+        data = self.__cursor.execute(
+            f"""SELECT {column} FROM regular_event WHERE id = {id}""").fetchone()
 
         if data is None:
             return None
