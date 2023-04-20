@@ -1,14 +1,13 @@
 import os
-
+import random
 
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
 
+from src.app.Images.images import CreatePetImage
 from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
-
-from src.app.fun.funny import *
 
 from src.app.player import Player
 
@@ -195,7 +194,7 @@ def events(message: Message):
 
     for event in lst_of_events:
         text += f'''\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
-    
+
     text+="Нерегуляные:\n"
 
     lst_of_events = db.fetchall("event")
@@ -248,11 +247,9 @@ def event_creator(message: Message):
 
 @bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Ударить','ударить'])
 def kick_smb(message: Message):
-    # bot.send_message(message.chat.id, text=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
-    photo = open('/Users/romburunduk/Downloads/kandinsky-download-1681909931506.png','rb')
+    # photo = CreatePetImage('app/Images/Body1.png', 'app/Images/Head1.png', 'app/Images/Weapon1.png')
+    photo = open('app/Images/fights/popug'+str(random.randint(1,3))+'.jpg','rb')
     bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
-
-
 
 
 
