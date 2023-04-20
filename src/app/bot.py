@@ -342,10 +342,10 @@ def create_event(message: Message):
 
 
 
-@bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Ударить','ударить'])
+@bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Отмудохать','отмудохать'])
 def kick_smb(message: Message):
     photo = open('app/Images/fights/popug'+str(random.randint(1,3))+'.jpg','rb')
-    bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
+    bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} отмудохал(а) {message.text.split(" ", 1)[1]}')
 
 @bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Попугбот','попугбот'] and str(message.text).split()[1]=='кто')
 def who_is(message: Message):
