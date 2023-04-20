@@ -1,14 +1,15 @@
 import os
-
+import random
 
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove, CallbackQuery
+from telebot import custom_filters
 
 from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
-from src.app.fun.funny import *
+# from src.app.fun.funny import *
 
 from src.app.player import Player
 
@@ -68,13 +69,6 @@ def get_balance(message):
     player_info.setId(message.chat.id)
     bot.send_message(message.chat.id, f"Ваш баланс: {player_info.getBalance()}")
 
-
-@bot.callback_query_handler(func=lambda call: True)
-def callback_query(call):
-    if call.data == "cb_yes":
-        bot.answer_callback_query(call.id, "Answer is Yes")
-    elif call.data == "cb_no":
-        bot.answer_callback_query(call.id, "Answer is No")
 
 
 @bot.message_handler(commands=['attack'])
@@ -250,10 +244,52 @@ def event_creator(message: Message):
 def kick_smb(message: Message):
     # bot.send_message(message.chat.id, text=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
     photo = open('/Users/romburunduk/Downloads/kandinsky-download-1681909931506.png','rb')
-    bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
+    bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} ударил(а) @{message.text.split(" ", 1)[1]}')
 
+
+# БОИ
+
+kb = InlineKeyboardMarkup(row_width=1)
+btn_accept = InlineKeyboardButton(text='Принять', callback_data='accept')
+kb.add(btn_accept)
+btn_cancel = InlineKeyboardButton(text='Отказать', callback_data='cancel')
+kb.add(btn_cancel)
+
+op_id = 0
+my_id = 0
+op_name = ""
+@bot.message_handler(func= lambda message: str(message.text.lower()).split()[0] in ['бой'])
+def attack(message: Message):
+    global op_id, my_id, op_name
+    my_id = int(message.from_user.id)
+    op_id = int(db.get_player_id(message.text.split(" ", 1)[1][1:]))
+    op_name = message.text.split(" ", 1)[1][1:]
+    bot.send_message(message.chat.id, f'{message.text.split(" ", 1)[1]}, Вас вызвали на бой', reply_markup=kb)
+    print(message.chat.id)
+
+class OpFilter(custom_filters.AdvancedCustomFilter):
+    key='set_op_id'
+    def check(self, message, text):
+        if isinstance(message, CallbackQuery):
+            return message.message.from_user.id in text
+        return message.from_user.id in text
+@bot.callback_query_handler(func=lambda call: True)
+def attack_user(call):
+    choosed_id = random.choice([my_id, op_id])
+    print(my_id, op_id)
+    print(call.message.text)
+    if call.data == "accept":
+        db.update(table="player", column="health", id=choosed_id,
+                  data=db.fetchone(table="player", column="health", id=choosed_id) - 10)
+        bot.edit_message_text(chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              text=f'у {db.fetchone(table="player", column="user_name", id=choosed_id)} отнялось 10HP. Текущее здоровье - {db.fetchone(table="player", column="health", id=choosed_id)}')
+    elif call.data == "cancel":
+        bot.edit_message_text(chat_id=call.message.chat.id,
+                              message_id=call.message.message_id, text="Бой отклонен")
 
 
 def run_polling():
     print("Bot has been started...")
+    bot.add_custom_filter(OpFilter())
     bot.polling(skip_pending=True)
