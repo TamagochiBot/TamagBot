@@ -1,5 +1,5 @@
 import os
-import random
+
 
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
@@ -8,7 +8,9 @@ from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
-from app.player import Player
+from src.app.fun.funny import *
+
+from src.app.player import Player
 
 player_info = Player()
 
@@ -16,14 +18,11 @@ bot = telebot.TeleBot(os.environ["TOKEN"])
 
 states = {}
 types = {}
-last_regular_event = db.count_rows("regular_event")
 
-id_for_edit = int()
-table_for_edit = str()
 
 # Регистрация в БД
 def registration(message: Message):
-    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
+    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.username)
     player_info.setId(message.from_user.id)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
 
@@ -84,11 +83,11 @@ def message_handler(message):
 
 @bot.message_handler(commands=['debug'])
 def debug(message: Message):
-    db.update(table='player', id=message.from_user.id, column='is_admin', data=True)
+    db.update(table='player', id=message.from_user.id, column='pet_name', data='Edic')
     db.save()
 
 @bot.message_handler(commands=['create_event'])
-def create_event(message: Message):
+def event_creator(message: Message):
     if db.exists(table='event', id=message.from_user.id, column='user_id'):
         if db.is_admin(message.from_user.id):
             bot.send_message(message.chat.id, text='Сейчас вы можете создать лишь регулярный ивент')
@@ -101,7 +100,7 @@ def create_event(message: Message):
         types[message.from_user.id] = 'unregular'
 
 @bot.message_handler(commands=['create_regular'])
-def create_regular(message: Message):
+def event_creator(message: Message):
     global last_regular_event
     if db.is_admin(message.from_user.id):
         db.create_regular_event(id=message.from_user.id)
@@ -112,134 +111,44 @@ def create_regular(message: Message):
     else:
         bot.send_message(message.chat.id, "У вас нет доступа")
 
-@bot.message_handler(commands=['delete_event'])
-def delete_event(message: Message):
+@bot.message_handler(commands=['event_delete'])
+def event_deleter(message: Message):
     if db.exists(table='event', id=message.from_user.id, column='user_id'):
         db.delete_event(message.from_user.id)
         bot.send_message(message.chat.id, 'Ваш ивент удален')
     else:
         bot.send_message(message.chat.id, 'У вас не было ивентов')
 
-@bot.message_handler(commands=["delete_regular"])
-def delete_regular(message: Message):
-    lst = get_list_of_regular()
-    if len(lst) != 0:
-        bot.send_message(message.chat.id, "Введите айди ивента, который хотите удалить")
-        bot.send_message(message.chat.id, get_list_of_regular())
-        states[message.from_user.id] = "delete_regular"
+@bot.message_handler(commands=['event_edit'])
+def event_edit(message: Message):
+    if db.exists(table='event',id=message.from_user.id, column='user_id'):
+        i = message.from_user.id
+        bot.send_message(message.chat.id, text=f'\nИвент: {db.fetchone(table="event", id=i, column="event_name")}\n'
+                                               f'Описание: {db.fetchone(table="event", id=i, column="description")}\n'
+                                               f'Опыт: {db.fetchone(table="event", id=i, column="experience")}\n'
+                                               f'Дедлайн: {db.fetchone(table="event", id=i, column="deadline")}\n\n')
+        bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
+                                                                                                  'Описание',
+                                                                                                  'Количество опыта',
+                                                                                                  'Дедалйн']))
+        states[message.from_user.id] = 'edit_smth'
     else:
-        bot.send_message(message.chat.id, "Нет регулярных событий")
+        bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
+
+
 
 @bot.message_handler(func=lambda message: message.from_user.id in states and
-                                          states[message.from_user.id] == "delete_regular")
-def delete_regular(message: Message):
-    try:
-        id = int(message.text)
-
-        if not db.exists(table="regular_event", id = id):
-            raise "doesn't exist"
-        
-        db.delete_regular(id)
-        bot.send_message(message.chat.id, "Готово")
-        del states[message.from_user.id]
-    except:
-            bot.send_message(message.chat.id, "Не подходящий айди. Попробуй еще раз")
-
-def describe_event(id:int,table:str)->None:
-    bot.send_message(id, text=f'\nИвент: {db.fetchone(table=table, id=id, column="event_name")}\n'
-                                               f'Описание: {db.fetchone(table=table, id=id, column="description")}\n'
-                                               f'Опыт: {db.fetchone(table=table, id=id, column="experience")}\n'
-                                               f'Дедлайн: {db.fetchone(table=table, id=id, column="deadline")}\n\n')
-
-@bot.message_handler(commands=['edit_event'])
-def edit_event(message: Message):
-    global id_for_edit
-    global table_for_edit
-
-    if db.is_admin(message.from_user.id):
-        bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Регулярное событие',
-                                                                                                  'Нерегулярное событие'
-                                                                                                  ]))
-        states[message.from_user.id] = 'choose_type'
-        #print(states[message.from_user.id], ' ', db.is_admin(message.from_user.id))
-    else:
-        if db.exists(table='event',id=message.from_user.id, column='user_id'):
-            id = message.from_user.id
-            describe_event(id, "event")
-            bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
-                                                                                                    'Описание',
-                                                                                                    'Количество опыта',
-                                                                                                    'Дедалйн']))
-            states[message.from_user.id] = 'edit_smth'
-            types[message.from_user.id] = "unregular"
-            id_for_edit = message.from_user.id
-            table_for_edit = "event"
-        else:
-            bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
-
-@bot.message_handler(func=lambda message: message.from_user.id in states and
-                                          states[message.from_user.id] in [
-                                                                           'choose_type',
-                                                                           'choose_id',
-                                                                           'edit_smth',
+                                          states[message.from_user.id] in ['edit_smth',
                                                                            'edit_name',
                                                                            'edit_description',
                                                                            'edit_exp',
                                                                            'edit_deadline'
                                                                            ])
-def edit_event(message: Message):
+def event_redactor(message: Message):
     current_state = str(states[message.from_user.id])
     empty_markup = telebot.types.ReplyKeyboardRemove()
- 
-    global id_for_edit
-    global table_for_edit
-    
     match current_state:
-        case 'choose_type':
-            match message.text:
-                case "Регулярное событие":
-                    if last_regular_event != 0:
-                        bot.send_message(message.chat.id, 'Напиши id ивента, который хочешь поменять?')
-                        bot.send_message(message.chat.id, get_list_of_regular())
-
-                        types[message.from_user.id] = "regular"
-                        states[message.from_user.id] = "choose_id"
-                        table_for_edit = "regular_event"
-                    else:
-                        bot.send_message(message.chat.id, 'У вас пока нет регулярных ивентов')
-                        del states[message.from_user.id]
-                case "Нерегулярное событие":
-                    if db.exists(table='event',id=message.from_user.id, column='user_id'):
-                        describe_event(id=message.from_user.id, table="event")
-
-                        bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
-                                                                                                                'Описание',
-                                                                                                                'Количество опыта',
-                                                                                                                'Дедалйн']))
-                        
-                        states[message.from_user.id] = 'edit_smth'
-                        types[message.from_user.id] = "unregular"
-                        id_for_edit = message.chat.id
-                        table_for_edit = "event"
-                    else:
-                        bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
-                case _:
-                    bot.send_message(message.from_user,"Попробуй еще раз")
-        case "choose_id":
-            try:
-                id_for_edit = int(message.text)
-                if not db.exists(table="regular_event", id = id_for_edit):
-                    raise "doesn't exist"
-                states[message.from_user.id] = "edit_smth"
-                bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
-                                                                                                                'Описание',
-                                                                                                                'Количество опыта',
-                                                                                                                'Дедалйн']))
-            except:
-                bot.send_message(message.chat.id, "Не подходящий айди. Попробуй еще раз")
         case 'edit_smth':
-            #table = types[message.from_user.id]
-            #print(table_for_edit + "\n\n\n\n\n\n")
             match message.text:
                 case 'Название':
                     states[message.from_user.id] = 'edit_name'
@@ -247,59 +156,54 @@ def edit_event(message: Message):
                 case 'Описание':
                     states[message.from_user.id] = 'edit_description'
                     bot.send_message(message.chat.id, 'Я вас слушаю...', reply_markup=empty_markup)
-                case 'Количество опыта':
+                case 'Колчиество опыта':
                     states[message.from_user.id] = 'edit_exp'
                     bot.send_message(message.chat.id, 'Я вас слушаю...', reply_markup=empty_markup)
-                case 'Дедлайн':
+                case 'Дедалйн':
                     states[message.from_user.id] = 'edit_deadline'
                     bot.send_message(message.chat.id, 'Я вас слушаю...', reply_markup=empty_markup)
                 case _ :
                     bot.send_message(message.chat.id, 'Попробуй еще раз')
         case 'edit_name':
-            db.update(table=table_for_edit,id=id_for_edit, column='event_name',data=message.text)
+            db.update(table='event',id=message.from_user.id, column='event_name',data=message.text)
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
             del states[message.from_user.id]
         case 'edit_description':
-            db.update(table = table_for_edit, id=id_for_edit, column='description', data=message.text)
+            db.update(table='event', id=message.from_user.id, column='description', data=message.text)
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
             del states[message.from_user.id]
         case 'edit_exp':
-            db.update(table=table_for_edit, id=id_for_edit, column='experience', data=int(message.text))
+            db.update(table='event', id=message.from_user.id, column='experience', data=int(message.text))
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
             del states[message.from_user.id]
         case 'edit_deadline':
-            db.update(table=table_for_edit, id=id_for_edit, column='deadline', data=message.text)
+            db.update(table='event', id=message.from_user.id, column='deadline', data=message.text)
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
             del states[message.from_user.id]
         case _:
             bot.send_message(message.chat.id, 'Что то пошло не так')
 
-def get_list_of_regular():
-    text = str()
-    lst_of_events = db.fetchall("regular_event")
-    for event in lst_of_events:
-        text += f'''ID:{event[0]}, Ивент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
-    return text
-
-def get_list_of_unregular():
-    text = str()
-    lst_of_events = db.fetchall("event")
-    for event in lst_of_events:
-        text += f'''Ивент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
-    return text
 
 @bot.message_handler(commands=['events'])
-def get_events(message: Message):
+def events(message: Message):
+    lst_of_events = db.fetchall("regular_event")
     text = 'Список ивентов\nРегулярные:\n'
-    text += get_list_of_regular()
-    text += 'Нерегулярные:\n'
-    text += get_list_of_unregular()
 
-    bot.send_message(message.chat.id, text=text)
+    for event in lst_of_events:
+        text += f'''\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
+    
+    text+="Нерегуляные:\n"
+
+    lst_of_events = db.fetchall("event")
+
+    for event in lst_of_events:
+        text += f'''\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
+
+    bot.send_message(message.chat.id, text=str(text))
 
 @bot.message_handler(
     func=lambda message: message.from_user.id in states and states[message.from_user.id] in [#'name_event', че это?
@@ -308,7 +212,7 @@ def get_events(message: Message):
                                                                                              'event_deadline',
                                                                                              'event_name'
                                                                                              ])
-def create_event(message: Message): 
+def event_creator(message: Message):
     current_state = str(states[message.from_user.id])
     event_type = str(types[message.from_user.id])
 
@@ -344,18 +248,10 @@ def create_event(message: Message):
 
 @bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Ударить','ударить'])
 def kick_smb(message: Message):
-    photo = open('app/Images/fights/popug'+str(random.randint(1,3))+'.jpg','rb')
+    # bot.send_message(message.chat.id, text=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
+    photo = open('/Users/romburunduk/Downloads/kandinsky-download-1681909931506.png','rb')
     bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
 
-@bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Попугбот','попугбот'] and str(message.text).split()[1]=='кто')
-def who_is(message: Message):
-    names = db.fetchall_in_one('player','user_name')
-    bot.send_message(message.chat.id, text=f'Несомненно, {message.text[12:]} - это {names[random.randint(0,len(names)-1)][0]}')
-
-@bot.message_handler(func= lambda message:message.text=='Подозревать')
-def suspect(message: Message):
-    video = open('app/Images/SuspectPopug.mp4','rb')
-    bot.send_video(message.chat.id, video=video)
 
 
 def run_polling():

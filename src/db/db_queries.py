@@ -164,6 +164,7 @@ class DataBase:
             self.__cursor.execute(
                 f"""UPDATE inventory SET {column} = {data} WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
 
+
     def __fetchone_event(self, id: int, column: str):
         data = self.__cursor.execute(
             f"""SELECT {column} FROM event WHERE user_id=(SELECT id FROM player WHERE id = {id})""").fetchone()
