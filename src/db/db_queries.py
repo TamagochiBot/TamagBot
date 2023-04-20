@@ -86,6 +86,13 @@ class DataBase:
         lst = self.__cursor.execute(f"""SELECT * FROM {table}""").fetchall()
         return lst
 
+    def fetchall_in_one(self, table:str, column:str) -> list:
+        """
+        Fetches all records from the table
+        """
+        lst = self.__cursor.execute(f"""SELECT {column} FROM {table}""").fetchall()
+        return lst
+
     def count_rows(self, table_name: str) -> int:
         '''
         Counts the number of table rows

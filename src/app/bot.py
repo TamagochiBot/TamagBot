@@ -4,7 +4,6 @@ import random
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
 
-# from src.app.Images.images import CreatePetImage
 from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
@@ -21,7 +20,7 @@ types = {}
 
 # Регистрация в БД
 def registration(message: Message):
-    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.username)
+    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
     player_info.setId(message.from_user.id)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
 
@@ -247,10 +246,18 @@ def event_creator(message: Message):
 
 @bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Ударить','ударить'])
 def kick_smb(message: Message):
-    # photo = CreatePetImage('app/Images/Body1.png', 'app/Images/Head1.png', 'app/Images/Weapon1.png')
     photo = open('app/Images/fights/popug'+str(random.randint(1,3))+'.jpg','rb')
     bot.send_photo(message.chat.id, photo=photo, caption=f'{message.from_user.first_name} ударил(а) {message.text.split(" ", 1)[1]}')
 
+@bot.message_handler(func= lambda message: str(message.text).split()[0] in ['Попугбот','попугбот'] and str(message.text).split()[1]=='кто')
+def who_is(message: Message):
+    names = db.fetchall_in_one('player','user_name')
+    bot.send_message(message.chat.id, text=f'Несомненно, {message.text[12:]} - это {names[random.randint(0,len(names)-1)][0]}')
+
+@bot.message_handler(func= lambda message:message.text=='Подозревать')
+def suspect(message: Message):
+    video = open('app/Images/SuspectPopug.mp4','rb')
+    bot.send_video(message.chat.id, video=video)
 
 
 def run_polling():
