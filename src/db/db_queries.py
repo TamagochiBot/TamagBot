@@ -30,6 +30,18 @@ class DataBase:
 
         self.save()
 
+    def get_player_id(self,user_name:str) -> int:
+        '''
+        gets player id by user_name
+        if there's no player, return None
+        '''
+        data = self.__cursor.execute(f"""SELECT id FROM player WHERE user_name = {user_name}""").fetchone()
+        if data is None:
+            return None
+        else:
+            return int(data[0])
+
+
     def is_admin(self, id:int) -> bool:
         return bool(self.__fetchone_player(id,"is_admin"))
 
