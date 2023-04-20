@@ -254,6 +254,8 @@ def kick_smb(message: Message):
 
 
 
+
+
 def run_polling():
     print("Bot has been started...")
     bot.polling(skip_pending=True)
