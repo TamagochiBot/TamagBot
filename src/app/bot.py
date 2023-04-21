@@ -382,6 +382,7 @@ def attack_user(call):
         bot.edit_message_text(chat_id=call.message.chat.id,
                               message_id=call.message.message_id, text="Бой отклонен")
 
+# БОИ
 
 def run_polling():
     print("Bot has been started...")
