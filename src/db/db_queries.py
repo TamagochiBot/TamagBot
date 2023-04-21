@@ -35,7 +35,7 @@ class DataBase:
         gets player id by user_name
         if there's no player, return None
         '''
-        data = self.__cursor.execute(f"""SELECT id FROM player WHERE user_name = \"{user_name}\"""").fetchone()
+        data = self.__cursor.execute(f"""SELECT id FROM player WHERE user_name = '{user_name}'""").fetchone()
         if data is None:
             return None
         else:
