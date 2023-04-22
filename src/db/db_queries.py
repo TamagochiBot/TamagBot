@@ -111,10 +111,13 @@ class DataBase:
         '''
         Counts the number of table rows
         '''
-        data = self.__cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-        count = data.fetchone()[0]
+        try:
+            data = self.__cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
+            count = data.fetchone()[0]
 
-        return count
+            return count
+        except:
+            return 0
 
     def save(self) -> None:
         """

@@ -17,7 +17,8 @@ from src.app.player import Player
 
 player_info = Player()
 
-bot = telebot.TeleBot(os.environ["TOKEN"])
+#bot = telebot.TeleBot(os.environ["TOKEN"])
+bot = telebot.TeleBot('5932887460:AAFh0T3IGTQ-M-LgekhsXTSxIpHBEqscBcw')
 
 states = {}
 types = {}
