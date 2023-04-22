@@ -102,6 +102,9 @@ def debug(message: Message):
     db.update(table='player', id=message.from_user.id, column='is_admin', data=True)
     db.save()
 
+# @bot.message_handler(commands=['inventory'])
+# # def inventory(message: Message):
+# #     if db.exists(table= 'inventory', id=message.from_user.id, )
 
 @bot.message_handler(commands=['create_event'])
 def create_event(message: Message):
@@ -432,21 +435,143 @@ class OpFilter(custom_filters.AdvancedCustomFilter):
 
 @bot.callback_query_handler(func=lambda call: True)
 def attack_user(call):
-    choosed_id = random.choice([my_id, op_id])
+
     print(my_id, op_id)
     print(call.message.text)
+
     if call.data == "accept":
-        db.update(table="player", column="health", id=choosed_id,
-                  data=db.fetchone(table="player", column="health", id=choosed_id) - 10)
-        bot.edit_message_text(chat_id=call.message.chat.id,
-                              message_id=call.message.message_id,
-                              text=f'у {db.fetchone(table="player", column="user_name", id=choosed_id)} отнялось 10HP. Текущее здоровье - {db.fetchone(table="player", column="health", id=choosed_id)}')
+
+        my_standard_damage = int(db.fetchone(table="player", column="strength", id=my_id))
+        op_standard_damage = int(db.fetchone(table="player", column="strength", id=op_id))
+        my_first_item_damage = 1
+        op_first_item_damage = 1
+        my_second_item_damage = 1
+        op_second_item_damage = 1
+        my_item_ability = "2"
+        op_item_ability = "2"
+        my_helmet_hp = 1
+        op_helmet_hp = 1
+        my_helmet_ability = "2"
+        op_helmet_ability = "2"
+        my_chest_plate_armour = 1
+        op_chest_plate_armour = 1
+        my_chest_plate_ability = "2"
+        op_chest_plate_ability = "2"
+
+        if my_helmet_ability == "Гос. стандарт":
+            my_hp = int(int(db.fetchone(table="player", column="health", id=my_id)) * 1.05) + my_helmet_hp
+        else:
+            my_hp = int(db.fetchone(table="player", column="health", id=my_id)) + my_helmet_hp
+        if op_helmet_ability == "Гос. стандарт":
+            op_hp = int(int(db.fetchone(table="player", column="health", id=op_id)) * 1.05) + op_helmet_hp
+        else:
+            op_hp = int(db.fetchone(table="player", column="health", id=op_id)) + op_helmet_hp
+
+        my_armour = my_chest_plate_armour
+        op_armour = op_chest_plate_armour
+
+        attacker = "me"
+        my_turn = 0
+        op_turn = 0
+
+        while my_hp > 0 and op_hp > 0:
+            sum_damage = 0
+
+            if attacker == "me":
+                my_turn += 1
+
+                sum_damage += my_standard_damage
+                if my_turn % 3 == 0:
+                    if op_helmet_ability == "Только мечом" and int(random.random() * 100) <= 14:
+                        sum_damage += int(my_second_item_damage * 0.8)
+                    else:
+                        sum_damage += my_second_item_damage
+                    if op_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
+                        continue
+                    elif op_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
+                        my_hp -= int(sum_damage * (1 - my_armour))
+                    else:
+                        op_hp -= int(sum_damage * (1 - op_armour))
+                else:
+                    sum_damage += my_first_item_damage
+                    if op_chest_plate_ability == "Без наворотов" and int(random.random() * 100) <= 14:
+                        op_hp -= int(sum_damage * (1 - op_armour))
+                    else:
+                        if my_item_ability == "Критовый попуг" and int(random.random() * 100) <= 4:
+                            sum_damage = int(sum_damage * 1.4)
+                        elif my_item_ability == "Снаряжение новичка":
+                            sum_damage += int(my_first_item_damage * 0.01)
+                        if op_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
+                            continue
+                        elif op_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
+                            if my_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
+                                my_hp -= sum_damage
+                            else:
+                                my_hp -= int(sum_damage * (1 - my_armour))
+                        else:
+                            if my_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
+                                op_hp -= sum_damage
+                            else:
+                                op_hp -= int(sum_damage * (1 - op_armour))
+
+                bot.send_message(my_id, "")
+                bot.send_message(op_id, "")
+                attacker = "opponent"
+
+            else:
+                op_turn += 1
+                sum_damage += op_standard_damage
+
+                if op_turn % 3 == 0:
+                    if my_helmet_ability == "Только мечом" and int(random.random() * 100) <= 14:
+                        sum_damage += int(op_second_item_damage * 0.8)
+                    else:
+                        sum_damage += op_second_item_damage
+                    if my_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
+                        continue
+                    elif my_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
+                        op_hp -= int(sum_damage * (1 - op_armour))
+                    else:
+                        my_hp -= int(sum_damage * (1 - my_armour))
+                else:
+                    sum_damage += op_first_item_damage
+                    if my_chest_plate_ability == "Без наворотов" and int(random.random() * 100) <= 14:
+                        my_hp -= int(sum_damage * (1 - my_armour))
+                    else:
+                        if op_item_ability == "Критовый попуг" and int(random.random() * 100) <= 4:
+                            sum_damage = int(sum_damage * 1.4)
+                        elif op_item_ability == "Снаряжение новичка":
+                            sum_damage += int(op_first_item_damage * 0.01)
+                        if my_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
+                            continue
+                        elif my_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
+                            if op_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
+                                op_hp -= sum_damage
+                            else:
+                                op_hp -= int(sum_damage * (1 - op_armour))
+                        else:
+                            if op_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
+                                my_hp -= sum_damage
+                            else:
+                                my_hp -= int(sum_damage * (1 - my_armour))
+
+                bot.send_message(my_id, "")
+                bot.send_message(op_id, "")
+                attacker = "me"
+
+        if my_hp <= 0:
+            bot.send_message(my_id, "")
+            bot.send_message(op_id, "")
+        else :
+            bot.send_message(my_id, "")
+            bot.send_message(op_id, "")
+
     elif call.data == "cancel":
         bot.edit_message_text(chat_id=call.message.chat.id,
                               message_id=call.message.message_id, text="Бой отклонен")
 
-
 # БОИ
+
 
 def run_polling():
     print("Bot has been started...")
