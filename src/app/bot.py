@@ -2,6 +2,8 @@ import os
 import random
 import datetime
 import schedule
+from threading import Thread
+import time as tm
 
 import telebot
 from telebot import custom_filters
@@ -327,6 +329,10 @@ def get_events(message: Message):
 
     bot.send_message(message.chat.id, text=text)
 
+def check_scheduler():
+    while True:
+        schedule.run_pending()
+        tm.sleep(1)
 
 @bot.message_handler(
     func=lambda message: message.from_user.id in states and states[message.from_user.id] in [  # 'name_event', че это?
@@ -354,7 +360,7 @@ def create_event(message: Message):
         case 'event_exp':
             if str.isdigit(message.text):
                 db.update(table=table, column='experience', id=user_id, data=int(message.text))
-                bot.send_message(message.chat.id, 'Укажите дедлайн в минутах')
+                bot.send_message(message.chat.id, 'Укажите дедлайн в секундах')
                 states[message.from_user.id] = 'event_deadline'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
@@ -445,6 +451,7 @@ def attack_user(call):
 def run_polling():
     print("Bot has been started...")
     bot.add_custom_filter(OpFilter())
+    Thread(target=check_scheduler).start()
     # try:
     bot.polling(skip_pending=True)
 
