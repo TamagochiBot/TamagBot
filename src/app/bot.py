@@ -11,14 +11,17 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, R
 
 from src.db.db_queries import DataBase
 
+from PIL import Image
+from PIL import ImageOps
+
 db = DataBase('testDB.db')
 
 from src.app.player import Player
 
 player_info = Player()
 
-#bot = telebot.TeleBot(os.environ["TOKEN"])
-bot = telebot.TeleBot('5932887460:AAFh0T3IGTQ-M-LgekhsXTSxIpHBEqscBcw')
+bot = telebot.TeleBot(os.environ["TOKEN"])
+#bot = telebot.TeleBot('5932887460:AAFh0T3IGTQ-M-LgekhsXTSxIpHBEqscBcw')
 
 states = {}
 types = {}
@@ -434,6 +437,24 @@ class OpFilter(custom_filters.AdvancedCustomFilter):
         return message.from_user.id in text
 
 
+def CreatePetImage(wayToBody, wayToHead, wayToWeapon):
+    '''Пример wayToBody=Body1.png'''
+    weaponImage = Image.open(wayToWeapon)
+    bodyImage=Image.open(wayToBody)
+    headImage=Image.open(wayToHead)
+    bodyWithHeadImage=Image.alpha_composite(bodyImage,headImage)
+    petImage=Image.alpha_composite(bodyWithHeadImage,weaponImage)
+    return petImage
+
+def CreateVersusImage(firstPet,secondPet):
+    versusImage=Image.open("Versus.png")
+    firstPet=ImageOps.mirror(firstPet)
+    newImage = Image.new("RGBA", (2000, 768))
+    newImage.paste(firstPet,(0,0))
+    newImage.paste(versusImage,(768,0))
+    newImage.paste(secondPet,(1232,0))
+    return newImage
+
 @bot.callback_query_handler(func=lambda call: True)
 def attack_user(call):
 
@@ -441,6 +462,18 @@ def attack_user(call):
     print(call.message.text)
 
     if call.data == "accept":
+        myImageConf={"Head":"1","Body":"1","Weapon":"1"}
+        opImageConf={"Head":"2","Body":"2","Weapon":"2"}
+        myImage=CreatePetImage("src.app.Images.Body"+myImageConf["Body"]+".png",
+                               "src.app.Images.Head"+myImageConf["Head"]+".png",
+                               "src.app.Images.Weapon"+myImageConf["Weapon"]+".png")
+        opImage=CreatePetImage("src.app.Images.Body"+opImageConf["Body"]+".png",
+                               "src.app.Images.Head"+opImageConf["Head"]+".png",
+                               "src.app.Images.Weapon"+opImageConf["Weapon"]+".png")
+        versusImage=CreateVersusImage(myImage,opImage)
+        #bot.send_photo(call.from_user.my_id,versusImage)
+        
+
 
         my_standard_damage = int(db.fetchone(table="player", column="strength", id=my_id))
         op_standard_damage = int(db.fetchone(table="player", column="strength", id=op_id))
