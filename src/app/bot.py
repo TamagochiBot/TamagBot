@@ -17,16 +17,12 @@ from src.app.player import Player
 
 player_info = Player()
 
-#bot = telebot.TeleBot(os.environ["TOKEN"])
-bot = telebot.TeleBot('5932887460:AAFh0T3IGTQ-M-LgekhsXTSxIpHBEqscBcw')
+bot = telebot.TeleBot(os.environ["TOKEN"])
 
 states = {}
 types = {}
+for_edit = {}
 last_regular_event = db.count_rows("regular_event")
-
-id_for_edit = int()
-table_for_edit = str()
-
 
 # Регистрация в БД
 def registration(message: Message):
@@ -103,10 +99,6 @@ def debug(message: Message):
     db.update(table='player', id=message.from_user.id, column='is_admin', data=True)
     db.save()
 
-# @bot.message_handler(commands=['inventory'])
-# # def inventory(message: Message):
-# #     if db.exists(table= 'inventory', id=message.from_user.id, )
-
 @bot.message_handler(commands=['create_event'])
 def create_event(message: Message):
     if db.exists(table='event', id=message.from_user.id, column='user_id'):
@@ -180,15 +172,11 @@ def describe_event(id: int, table: str) -> None:
 
 @bot.message_handler(commands=['edit_event'])
 def edit_event(message: Message):
-    global id_for_edit
-    global table_for_edit
-
     if db.is_admin(message.from_user.id):
         bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Регулярное событие',
                                                                                                   'Нерегулярное событие'
                                                                                                   ]))
         states[message.from_user.id] = 'choose_type'
-        # print(states[message.from_user.id], ' ', db.is_admin(message.from_user.id))
     else:
         if db.exists(table='event', id=message.from_user.id, column='user_id'):
             id = message.from_user.id
@@ -200,7 +188,8 @@ def edit_event(message: Message):
             states[message.from_user.id] = 'edit_smth'
             types[message.from_user.id] = "unregular"
             id_for_edit = message.from_user.id
-            table_for_edit = "event"
+            table_for_edit = 'event'
+            for_edit[message.from_user.id] = (id_for_edit, table_for_edit)
         else:
             bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
 
@@ -218,9 +207,7 @@ def edit_event(message: Message):
 def edit_event(message: Message):
     current_state = str(states[message.from_user.id])
     empty_markup = telebot.types.ReplyKeyboardRemove()
-
-    global id_for_edit
-    global table_for_edit
+    id_for_edit, table_for_edit = for_edit[message.from_user.id]
 
     match current_state:
         case 'choose_type':
@@ -232,7 +219,7 @@ def edit_event(message: Message):
 
                         types[message.from_user.id] = "regular"
                         states[message.from_user.id] = "choose_id"
-                        table_for_edit = "regular_event"
+                        for_edit[message.from_user.id][1] = "regular_event"
                     else:
                         bot.send_message(message.chat.id, 'У вас пока нет регулярных ивентов')
                         del states[message.from_user.id]
@@ -248,16 +235,16 @@ def edit_event(message: Message):
 
                         states[message.from_user.id] = 'edit_smth'
                         types[message.from_user.id] = "unregular"
-                        id_for_edit = message.chat.id
-                        table_for_edit = "event"
+                        for_edit[message.from_user.id][0] = message.chat.id
+                        for_edit[message.from_user.id][1] = "event"
                     else:
                         bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
                 case _:
                     bot.send_message(message.chat.id, "Попробуй еще раз")
         case "choose_id":
             try:
-                id_for_edit = int(message.text)
-                if not db.exists(table="regular_event", id=id_for_edit):
+                for_edit[message.from_user.id][0] = int(message.text)
+                if not db.exists(table="regular_event", id=for_edit[message.from_user.id][0]):
                     raise "doesn't exist"
                 states[message.from_user.id] = "edit_smth"
                 bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
@@ -339,13 +326,14 @@ def check_scheduler():
         tm.sleep(1)
 
 @bot.message_handler(
-    func=lambda message: message.from_user.id in states and states[message.from_user.id] in [  # 'name_event', че это?
+    func=lambda message: message.from_user.id in states and states[message.from_user.id] in [ 
         'event_description',
         'event_exp',
         'event_deadline',
         'event_name'
     ])
 def create_event(message: Message):
+    global last_regular_event
     current_state = str(states[message.from_user.id])
     event_type = str(types[message.from_user.id])
 
@@ -368,12 +356,13 @@ def create_event(message: Message):
                 states[message.from_user.id] = 'event_deadline'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
-                states[message.from_user.id] = 'event_exp'
+                #states[message.from_user.id] = 'event_exp' нахера это делать?
         case 'event_deadline':
             db.update(table=table, column='deadline', id=user_id, data=message.text)
             db.save()
-            time = int(db.fetchone(table=table,id=message.from_user.id, column='deadline'))
-            schedule.every(time).seconds.do(notification_event,message=message).tag(message.from_user.id)
+            #event_id = last_regular_event if table == "regular_event" else message.from_user.id
+            #time = int(db.fetchone(table=table,id=event_id, column='deadline'))
+            schedule.every(int(message.text)).seconds.do(notification_event,message=message).tag(message.from_user.id)
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
         case _:
