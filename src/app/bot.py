@@ -1,7 +1,7 @@
 import os
 import random
 import datetime
-
+import schedule
 
 import telebot
 from telebot import custom_filters
@@ -48,6 +48,19 @@ def MarkupFromList(listOfButtons):
         btn = telebot.types.KeyboardButton(buttonName)
         markup.add(btn)
     return markup
+
+def notification_event(message: Message):
+    table='event'
+    id=message.from_user.id
+    bot.send_message(message.chat.id,text=f'Ваш ивент:\n'
+                                          f'{db.fetchone(table=table, id=id, column="event_name")}\n'
+                                          f'Описание: {db.fetchone(table=table, id=id, column="description")}\n'
+                                          f'Опыт: {db.fetchone(table=table, id=id, column="experience")}\n\n'
+                                          f'Закончился!'
+                     )
+    db.delete_event(message.from_user.id)
+    return schedule.CancelJob
+
 
 
 @bot.message_handler(commands=['start'])
@@ -120,6 +133,7 @@ def delete_event(message: Message):
     if db.exists(table='event', id=message.from_user.id, column='user_id'):
         db.delete_event(message.from_user.id)
         bot.send_message(message.chat.id, 'Ваш ивент удален')
+        schedule.clear(message.from_user.id)
     else:
         bot.send_message(message.chat.id, 'У вас не было ивентов')
 
@@ -340,7 +354,7 @@ def create_event(message: Message):
         case 'event_exp':
             if str.isdigit(message.text):
                 db.update(table=table, column='experience', id=user_id, data=int(message.text))
-                bot.send_message(message.chat.id, 'Укажите дедлайн')
+                bot.send_message(message.chat.id, 'Укажите дедлайн в минутах')
                 states[message.from_user.id] = 'event_deadline'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
@@ -348,6 +362,8 @@ def create_event(message: Message):
         case 'event_deadline':
             db.update(table=table, column='deadline', id=user_id, data=message.text)
             db.save()
+            time = int(db.fetchone(table=table,id=message.from_user.id, column='deadline'))
+            schedule.every(time).seconds.do(notification_event,message=message).tag(message.from_user.id)
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
         case _:
@@ -429,9 +445,10 @@ def attack_user(call):
 def run_polling():
     print("Bot has been started...")
     bot.add_custom_filter(OpFilter())
-    try:
-        bot.polling(skip_pending=True)
-    except Exception as err:
-        bot.send_message(771366061, text=f'Время: {datetime.datetime.now()}\n'
-                                         f'Тип: {err.__class__}\n'
-                                         f'Ошибка: {err}')
+    # try:
+    bot.polling(skip_pending=True)
+
+    # except Exception as err:
+    #     bot.send_message(771366061, text=f'Время: {datetime.datetime.now()}\n'
+    #                                      f'Тип: {err.__class__}\n'
+    #                                      f'Ошибка: {err}')
