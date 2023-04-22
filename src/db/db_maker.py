@@ -6,14 +6,6 @@ def init():
     # database cursor is a mechanism that enables traversal over the records in a database.
     cursor = connect.cursor()
 
-    # INVENTORY TABLE
-    cursor.execute('''CREATE TABLE IF NOT EXISTS inventory (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            apples INT NOT NULL DEFAULT 5,
-            cookies INT NOT NULL DEFAULT 5
-            );
-    ''')
-
     #PLAYER TABLE
     cursor.execute('''CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY,
@@ -21,20 +13,28 @@ def init():
             balance INTEGER NOT NULL DEFAULT 0,
             level INTEGER NOT NULL DEFAULT 1,
             experience INTEGER NOT NULL DEFAULT 0,
-            helmet BLOB DEFAULT NULL,
-            chestplate BLOB DEFAULT NULL,
-            leggings BLOB DEFAULT NULL,
-            boots BLOB DEFAULT NULL,
-            item1 BLOB DEFAULT NULL,
-            item2 BLOB DEFAULT NULL,
+            helmet INTEGER DEFAULT NULL,
+            chestplate INTEGER DEFAULT NULL,
+            item1 INTEGER DEFAULT NULL,
+            item2 INTEGER DEFAULT NULL,
             user_name VARCHAR(40) NOT NULL DEFAULT 'UNKNOWN',
             pet_name VARCHAR(40) NOT NULL DEFAULT 'UNKNOWN',
             health INTEGER NOT NULL DEFAULT 100,
             strength INTEGER NOT NULL DEFAULT 0,
-            weapon_damage INTEGER NOT NULL DEFAULT 0,
-            inventory_id INTEGER,
-            FOREIGN KEY(inventory_id) REFERENCES inventory(id)
-            ON DELETE SET NULL ON UPDATE CASCADE
+            weapon_damage INTEGER NOT NULL DEFAULT 0
+            );
+    ''')
+
+     # ITEMS TABLE
+    cursor.execute('''CREATE TABLE IF NOT EXISTS item (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            type VARCHAR(40) NOT NULL DEFAULT '',
+            name VARCHAR(40) NOT NULL DEFUALT '',
+            stats INTEGER NOT NULL DEFAULT 0,
+            mod TEXT NOT NULL DEFAULT '',
+            FOREIGN KEY(user_id) REFERENCES player(id)
+            ON DELETE CASCADE ON UPDATE CASCADE
             );
     ''')
 

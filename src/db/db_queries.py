@@ -21,12 +21,8 @@ class DataBase:
         """
         Inserts a player in the "player" table
         """
-        # inserting inventory
-        inventory_id = self.__cursor.execute("""INSERT INTO inventory DEFAULT VALUES""").lastrowid
-
-        # inserting player
-        self.__cursor.execute("""INSERT INTO player(id,is_admin,user_name,pet_name,inventory_id) VALUES (?,?,?,?,?)""",
-                              (id, is_admin, user_name, pet_name, inventory_id,))
+        self.__cursor.execute("""INSERT INTO player(id,is_admin,user_name,pet_name) VALUES (?,?,?,?)""",
+                              (id, is_admin, user_name, pet_name,))
 
         self.save()
 
@@ -40,7 +36,6 @@ class DataBase:
             return None
         else:
             return int(data[0])
-
 
     def is_admin(self, id:int) -> bool:
         return bool(self.__fetchone_player(id,"is_admin"))
@@ -60,16 +55,19 @@ class DataBase:
         """
         self.__cursor.execute("""INSERT INTO regular_event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?)""",
                               (id, event_name, description, experience, deadline))
+        
+        self.save()
 
-    def update(self, table: str, id:int, column: str, data) -> None:
+    def update(self, table: str, id:int, column: str, data, type_of_item:str = '') -> None:
         '''
         Updates a single column record in the table
+        requires save() after all changes!
         '''
         match table:
             case "player":
                 self.__update_player(id, column, data)
-            case "inventory":
-                self.__update_inventory(id, column, data)
+            case "item":
+                self.__update_item(id, type_of_item, column, data)
             case "event":
                 self.__update_event(id, column, data)
             case "regular_event":
@@ -77,15 +75,15 @@ class DataBase:
             case _:
                 raise ValueError(f"Table does not exist")
 
-    def fetchone(self, table: str, id: int, column: str):
+    def fetchone(self, table: str, id: int, column: str, type_of_item:str = ''):
         '''
         Fetches one record from the table
         '''
         match table:
             case "player":
                 return self.__fetchone_player(id, column)
-            case "inventory":
-                return self.__fetchone_inventory(id, column)
+            case "item":
+                return self.__fetchone_item(id, type_of_item, column)
             case "event":
                 return self.__fetchone_event(id, column)
             case "regular_event":
@@ -139,6 +137,68 @@ class DataBase:
         self.__cursor.execute(f"""DELETE FROM regular_event WHERE id = {id}""")
         self.save()
 
+    def get_item_mod(self, id:int, type:str) -> str:
+        '''
+        function takes tele_id and type of item: "helmet", "chestplate", "item1", "item2"
+        returns mod of item
+        '''
+        try:
+            item_id = self.get_item_id(id, type)
+            data = self.__fetchone_item(item_id, type, "mod")
+            if data is None:
+                return ''
+            else:
+                return data[0]
+        except:
+            return ''
+        
+    def get_item_stats(self, id:int, type:str) -> int:
+        '''
+        function takes tele_id and type of item: "helmet", "chestplate", "item1", "item2"
+        returns mod of item
+        '''
+        try:
+            item_id = self.get_item_id(id, type)
+            data = self.__fetchone_item(item_id, type, "stats")
+            if data is None:
+                return 0
+            else:
+                return data[0]
+        except:
+            return 0
+        
+    def get_all_items(self, id:int, type:str) -> list():
+        '''
+        Takes tele_id and returns all items of one type
+        '''
+        lst = self.__cursor.execute(
+            f"""SELECT * FROM item WHERE user_id = {id} AND type = '{type}'""").fetchall()
+        return lst
+    
+    def set_item(self, id:int, type:str, item_id:int) -> None:
+        self.__update_player(id,type,item_id)
+
+    def create_item(self, id:int, type:str, name:str, stats:int, mod:str) -> None:
+        '''
+        Inserts item to the 'item' table
+        '''
+        self.__cursor.execute("""INSERT INTO item(user_id,type,name,stats,mod) VALUES (?,?,?,?,?)""",
+                              (id, type, name, stats, mod,))
+        
+        self.save()
+
+    def get_item_id(self, id:int,type:str) -> int:
+        """
+        Gets item_id of worn item
+        """
+        try:
+            item_id = self.__cursor.execute(
+                f"""SELECT {type} FROM item""").fetchone()[0]
+            
+            return None if item_id is None else item_id
+        except:
+            return None
+
     def __update_event(self, id: int, column: str, data) -> None:
         if type(data) is str:
             self.__cursor.execute(
@@ -147,7 +207,7 @@ class DataBase:
             self.__cursor.execute(
                 f"""UPDATE event SET {column} = {data} WHERE user_id = (SELECT id FROM player WHERE id = {id})""")
 
-    def __update_regular_event(self,id: int, column:str, data):
+    def __update_regular_event(self,id: int, column:str, data) -> None:
         if type(data) is str:
             self.__cursor.execute(f"""UPDATE regular_event SET {column} = \'{data}\' WHERE id = {id}""")
         else:
@@ -159,14 +219,17 @@ class DataBase:
         else:
             self.__cursor.execute(f"""UPDATE player SET {column} = {data} WHERE id = {id}""")
 
-    def __update_inventory(self, id: int, column: str, data) -> None:
-        if type(data) is str:
-            self.__cursor.execute(
-                f"""UPDATE inventory SET {column} = \'{data}\' WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
-        else:
-            self.__cursor.execute(
-                f"""UPDATE inventory SET {column} = {data} WHERE id = (SELECT inventory_id FROM player WHERE id = {id})""")
-
+    def __update_item(self, id: int, column: str, data) -> None:
+        try:
+            #item_id = self.__get_item_id(id,type)
+            if type(data) is str:
+                self.__cursor.execute(
+                    f"""UPDATE item SET {column} = \'{data}\' WHERE id = {id}""")
+            else:
+                self.__cursor.execute(
+                    f"""UPDATE item SET {column} = {data} WHERE user_id = {id}""")
+        except:
+            print("nothing")
 
     def __fetchone_event(self, id: int, column: str):
         data = self.__cursor.execute(
@@ -186,14 +249,18 @@ class DataBase:
         else:
             return data[0]
 
-    def __fetchone_inventory(self, id: int, column: str):
-        data = self.__cursor.execute(
-            f"""SELECT {column} FROM inventory WHERE id=(SELECT inventory_id FROM player WHERE id = {id})""").fetchone()
+    def __fetchone_item(self, id: int, column: str):
+        try:
+            #item_id = self.__get_item_id(id,type)
+            data = self.__cursor.execute(
+                f"""SELECT {column} FROM item WHERE id={id}""").fetchone()
 
-        if data is None:
+            if data is None:
+                return None
+            else:
+                return data[0]
+        except:
             return None
-        else:
-            return data[0]
 
     def __fetchone_player(self, id: int, column: str):
         data = self.__cursor.execute(f"""SELECT {column} FROM player WHERE id={id}""").fetchone()
@@ -202,3 +269,5 @@ class DataBase:
             return None
         else:
             return data[0]
+
+db = DataBase("test.db")
