@@ -30,7 +30,7 @@ def init():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             type VARCHAR(40) NOT NULL DEFAULT '',
-            name VARCHAR(40) NOT NULL DEFUALT '',
+            name VARCHAR(40) NOT NULL DEFAULT '',
             stats INTEGER NOT NULL DEFAULT 0,
             mod TEXT NOT NULL DEFAULT '',
             FOREIGN KEY(user_id) REFERENCES player(id)
@@ -58,7 +58,7 @@ def init():
             user_id INTEGER NOT NULL,
             description TEXT NOT NULL DEFAULT '',
             experience INTEGER NOT NULL DEFAULT 0,
-            deadline DATETIME DEFAULT NULL,
+            deadline TEXT DEFAULT NULL,
             list_of_players TEXT NOT NULL DEFAULT '',
             FOREIGN KEY(user_id) REFERENCES player(id)
             ON DELETE SET NULL ON UPDATE CASCADE

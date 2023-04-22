@@ -269,5 +269,3 @@ class DataBase:
             return None
         else:
             return data[0]
-
-db = DataBase("test.db")
