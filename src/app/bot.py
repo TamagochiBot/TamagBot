@@ -1,6 +1,7 @@
 import os
 import random
-import datetime
+from datetime import datetime
+
 import schedule
 from threading import Thread
 import time as tm
@@ -24,11 +25,11 @@ types = {}
 for_edit = {}
 last_regular_event = db.count_rows("regular_event")
 
-# Регистрация в БД
-def registration(message: Message):
-    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
-    player_info.setId(message.from_user.id)
-    bot.reply_to(message, "Вы успешно зарегестрированы!")
+id_for_edit = int()
+table_for_edit = str()
+
+
+
 
 
 # Создание inline кнопок
@@ -39,6 +40,14 @@ def gen_markup() -> telebot.types.InlineKeyboardMarkup:
                InlineKeyboardButton("No", callback_data="cb_no"))
     return markup
 
+
+# Создание InlineKeyboard кнопок
+def InlineMarkupFromLists(listOfButtons,listOfCalls):
+    markup = telebot.types.InlineKeyboardMarkup()
+    for i in range(len(listOfCalls)):
+        btn = telebot.types.InlineKeyboardButton(text=listOfButtons[i],callback_data=listOfCalls[i])
+        markup.add(btn)
+    return markup
 
 # Создание KeyBoard кнопок
 def MarkupFromList(listOfButtons):
@@ -77,7 +86,6 @@ def notification_event(message: Message,id:int, table: str):
 
 @bot.message_handler(commands=['start'])
 def start_message(message: Message):
-    print(db.get_player_id(message.from_user.username))
     bot.send_message(message.chat.id, 'Привет, я ПопугБот!')
     bot.send_message(message.chat.id, 'Давай ка посмотрим, есть ли у тебя попуг 🦜')
     if db.exists(table='player', id=message.from_user.id):
@@ -85,7 +93,16 @@ def start_message(message: Message):
     else:
         bot.send_message(message.chat.id, """Похоже, ты ещё не зарегестрирован, минуту...""")
         bot.send_message(message.chat.id, """Как будут звать твоего питомца?""")
-        bot.register_next_step_handler(message, registration)
+        states[message.from_user.id]='registry'
+
+
+# Регистрация в БД
+@bot.message_handler(func=lambda message: message.from_user.id in states and
+                                          states[message.from_user.id] =='registry')
+def registration(message: Message):
+    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
+    bot.reply_to(message, "Вы успешно зарегестрированы!")
+    del states[message.from_user.id]
 
 
 @bot.message_handler(commands=['cancel'])
@@ -339,7 +356,7 @@ def check_scheduler():
         tm.sleep(1)
 
 @bot.message_handler(
-    func=lambda message: message.from_user.id in states and states[message.from_user.id] in [ 
+    func=lambda message: message.from_user.id in states and states[message.from_user.id] in [
         'event_description',
         'event_exp',
         'event_deadline',
