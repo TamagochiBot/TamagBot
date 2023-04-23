@@ -1,3 +1,4 @@
+import math
 import os
 import random
 from datetime import datetime
@@ -14,7 +15,7 @@ from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
-from src.app.player import Player
+from TamagBot.src.app.player import Player
 
 player_info = Player()
 
@@ -44,12 +45,13 @@ def gen_markup() -> telebot.types.InlineKeyboardMarkup:
 
 
 # Создание InlineKeyboard кнопок
-def InlineMarkupFromLists(listOfButtons,listOfCalls):
+def InlineMarkupFromLists(listOfButtons, listOfCalls):
     markup = telebot.types.InlineKeyboardMarkup()
     for i in range(len(listOfCalls)):
         btn = telebot.types.InlineKeyboardButton(text=listOfButtons[i],callback_data=listOfCalls[i])
         markup.add(btn)
     return markup
+
 
 # Создание KeyBoard кнопок
 def MarkupFromList(listOfButtons):
@@ -58,6 +60,7 @@ def MarkupFromList(listOfButtons):
         btn = telebot.types.KeyboardButton(buttonName)
         markup.add(btn)
     return markup
+
 
 def run_threaded(message: Message, id:int, table:str, event_data:list):
     Thread(target=notification_event,kwargs={"message":message,"id":id,"table":table,"event_data":event_data}).start()
@@ -68,24 +71,22 @@ def run_threaded(message: Message, id:int, table:str, event_data:list):
         del state_of_regular[id]
         return schedule.CancelJob
 
+
 def notification_event(message: Message,id:int, table: str,event_data:list):
     if table == "event":
         bot.send_message(message.chat.id,text=f'Ваш ивент:\n'
                                           f'{event_data[0]}\n'
                                           f'Описание: {event_data[1]}\n'
                                           f'Опыт: {event_data[2]}\n'
-                                          f'Закончился!'
-        )
+                                          f'Закончился!')
         db.delete_event(id)
     elif state_of_regular[id] == "run":
         bot.send_message(message.from_user.id,text=f'Ваш ивент:\n'
                                           f'{event_data[0]}\n'
                                           f'Описание: {event_data[1]}\n'
                                           f'Опыт: {event_data[2]}\n'
-                                          f'Участники: {participants_of_regular[id]}'
-        )
+                                          f'Участники: {participants_of_regular[id]}')
     #return schedule.CancelJob
-
 
 
 @bot.message_handler(commands=['start'])
@@ -97,12 +98,12 @@ def start_message(message: Message):
     else:
         bot.send_message(message.chat.id, """Похоже, ты ещё не зарегестрирован, минуту...""")
         bot.send_message(message.chat.id, """Как будут звать твоего питомца?""")
-        states[message.from_user.id]='registry'
+        states[message.from_user.id] = 'registry'
 
 
 # Регистрация в БД
 @bot.message_handler(func=lambda message: message.from_user.id in states and
-                                          states[message.from_user.id] =='registry')
+                                          states[message.from_user.id] == 'registry')
 def registration(message: Message):
     db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
@@ -133,6 +134,7 @@ def debug(message: Message):
     db.update(table='player', id=message.from_user.id, column='is_admin', data=True)
     db.save()
 
+
 @bot.message_handler(commands=['create_event'])
 def create_event(message: Message):
     if db.exists(table='event', id=message.from_user.id, column='user_id'):
@@ -146,10 +148,12 @@ def create_event(message: Message):
         states[message.from_user.id] = 'event_name'
         type_of_event[message.from_user.id] = 'unregular'
 
+
 def check_scheduler():
     while True:
         schedule.run_pending()
         tm.sleep(1)
+
 
 @bot.message_handler(commands=['create_regular'])
 def create_regular(message: Message):
@@ -211,7 +215,6 @@ def create_event(message: Message):
             del states[message.from_user.id]
         case _:
             bot.send_message(message.chat.id, 'LOL')
-
 
 
 @bot.message_handler(commands=['delete_event'])
@@ -408,6 +411,7 @@ def get_events(message: Message):
 
     bot.send_message(message.chat.id, text=text)
 
+
 @bot.message_handler(func=lambda message: str(message.text).split()[0] in ['Отмудохать', 'отмудохать'])
 def kick_smb(message: Message):
     photo = open('app/Images/fights/popug' + str(random.randint(1, 3)) + '.jpg', 'rb')
@@ -430,6 +434,19 @@ def suspect(message: Message):
     bot.send_video(message.chat.id, video=video)
 
 
+def experience_change(person_id, experience):
+    lvl_from_table = int(db.fetchone(table="player", column="level", id=person_id))
+    exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
+    exp_got = db.fetchone(table="player", column="experience") + experience
+    while exp_got >= exp_needed:
+        exp_got -= exp_needed
+        lvl_from_table += 1
+        exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
+        db.set_lvl(person_id, 1)
+    db.set_exp(person_id, exp_got)
+    db.save()
+
+
 # БОИ
 
 kb = InlineKeyboardMarkup(row_width=1)
@@ -446,8 +463,8 @@ op_name = ""
 @bot.message_handler(func=lambda message: str(message.text.lower()).split()[0] in ['бой'])
 def attack(message: Message):
     global op_id, my_id, op_name
-    my_id = int(message.from_user.id)
-    op_id = int(db.get_player_id(message.text.split(" ", 1)[1][1:]))
+    my_id = message.from_user.id
+    op_id = db.get_player_id(message.text.split(" ", 1)[1][1:])
     op_name = message.text.split(" ", 1)[1][1:]
     bot.send_message(message.chat.id, f'{message.text.split(" ", 1)[1]}, Вас вызвали на бой', reply_markup=kb)
 
@@ -461,7 +478,7 @@ class OpFilter(custom_filters.AdvancedCustomFilter):
         return message.from_user.id in text
 
 
-@bot.callback_query_handler(func=lambda call: True)
+@bot.callback_query_handler(func=lambda call: call.data in ['accept', 'cancel'])
 def attack_user(call):
 
     print(my_id, op_id)
