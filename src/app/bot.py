@@ -1,6 +1,7 @@
 import os
 import random
-import datetime
+from datetime import datetime
+
 import schedule
 from threading import Thread
 import time as tm
@@ -24,11 +25,11 @@ types = {}
 for_edit = {}
 last_regular_event = db.count_rows("regular_event")
 
-# Регистрация в БД
-def registration(message: Message):
-    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
-    player_info.setId(message.from_user.id)
-    bot.reply_to(message, "Вы успешно зарегестрированы!")
+id_for_edit = int()
+table_for_edit = str()
+
+
+
 
 
 # Создание inline кнопок
@@ -39,6 +40,14 @@ def gen_markup() -> telebot.types.InlineKeyboardMarkup:
                InlineKeyboardButton("No", callback_data="cb_no"))
     return markup
 
+
+# Создание InlineKeyboard кнопок
+def InlineMarkupFromLists(listOfButtons,listOfCalls):
+    markup = telebot.types.InlineKeyboardMarkup()
+    for i in range(len(listOfCalls)):
+        btn = telebot.types.InlineKeyboardButton(text=listOfButtons[i],callback_data=listOfCalls[i])
+        markup.add(btn)
+    return markup
 
 # Создание KeyBoard кнопок
 def MarkupFromList(listOfButtons):
@@ -64,7 +73,6 @@ def notification_event(message: Message):
 
 @bot.message_handler(commands=['start'])
 def start_message(message: Message):
-    print(db.get_player_id(message.from_user.username))
     bot.send_message(message.chat.id, 'Привет, я ПопугБот!')
     bot.send_message(message.chat.id, 'Давай ка посмотрим, есть ли у тебя попуг 🦜')
     if db.exists(table='player', id=message.from_user.id):
@@ -72,7 +80,16 @@ def start_message(message: Message):
     else:
         bot.send_message(message.chat.id, """Похоже, ты ещё не зарегестрирован, минуту...""")
         bot.send_message(message.chat.id, """Как будут звать твоего питомца?""")
-        bot.register_next_step_handler(message, registration)
+        states[message.from_user.id]='registry'
+
+
+# Регистрация в БД
+@bot.message_handler(func=lambda message: message.from_user.id in states and
+                                          states[message.from_user.id] =='registry')
+def registration(message: Message):
+    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
+    bot.reply_to(message, "Вы успешно зарегестрированы!")
+    del states[message.from_user.id]
 
 
 @bot.message_handler(commands=['cancel'])
@@ -326,7 +343,7 @@ def check_scheduler():
         tm.sleep(1)
 
 @bot.message_handler(
-    func=lambda message: message.from_user.id in states and states[message.from_user.id] in [ 
+    func=lambda message: message.from_user.id in states and states[message.from_user.id] in [
         'event_description',
         'event_exp',
         'event_deadline',
@@ -433,32 +450,32 @@ def attack_user(call):
 
         my_standard_damage = int(db.fetchone(table="player", column="strength", id=my_id))
         op_standard_damage = int(db.fetchone(table="player", column="strength", id=op_id))
-        my_first_item_damage = 1
-        op_first_item_damage = 1
-        my_second_item_damage = 1
-        op_second_item_damage = 1
-        my_item_ability = "2"
-        op_item_ability = "2"
-        my_helmet_hp = 1
-        op_helmet_hp = 1
-        my_helmet_ability = "2"
-        op_helmet_ability = "2"
-        my_chest_plate_armour = 1
-        op_chest_plate_armour = 1
-        my_chest_plate_ability = "2"
-        op_chest_plate_ability = "2"
+        my_first_item_damage = db.get_item_stats(my_id, "item1")
+        op_first_item_damage = db.get_item_stats(op_id, "item1")
+        my_second_item_damage = db.get_item_stats(my_id, "item2")
+        op_second_item_damage = db.get_item_stats(op_id, "item2")
+        my_item_ability = db.get_item_mod(my_id, "item1")
+        op_item_ability = db.get_item_mod(op_id, "item1")
+        my_helmet_hp = db.get_item_stats(my_id, "helmet")
+        op_helmet_hp = db.get_item_stats(op_id, "helmet")
+        my_helmet_ability = db.get_item_mod(my_id, "helmet")
+        op_helmet_ability = db.get_item_mod(op_id, "helmet")
+        my_chest_plate_armor = db.get_item_stats(my_id, "chestplate")
+        op_chest_plate_armor = db.get_item_stats(op_id, "chestplate")
+        my_chest_plate_ability = db.get_item_mod(my_id, "chestplate")
+        op_chest_plate_ability = db.get_item_mod(op_id, "chestplate")
 
-        if my_helmet_ability == "Гос. стандарт":
+        if my_helmet_ability == "Госстандарт":
             my_hp = int(int(db.fetchone(table="player", column="health", id=my_id)) * 1.05) + my_helmet_hp
         else:
             my_hp = int(db.fetchone(table="player", column="health", id=my_id)) + my_helmet_hp
-        if op_helmet_ability == "Гос. стандарт":
+        if op_helmet_ability == "Госстандарт":
             op_hp = int(int(db.fetchone(table="player", column="health", id=op_id)) * 1.05) + op_helmet_hp
         else:
             op_hp = int(db.fetchone(table="player", column="health", id=op_id)) + op_helmet_hp
 
-        my_armour = my_chest_plate_armour
-        op_armour = op_chest_plate_armour
+        my_armor = my_chest_plate_armor
+        op_armor = op_chest_plate_armor
 
         attacker = "me"
         my_turn = 0
@@ -466,46 +483,87 @@ def attack_user(call):
 
         while my_hp > 0 and op_hp > 0:
             sum_damage = 0
+            wisdom_of_ara_flag = 0
+            only_sword_flag = 0
+            poisonous_armor_flag = 0
+            no_mods_flag = 0
+            gods_killer_flag = 0
+            krit_perrot_flag = 0
 
             if attacker == "me":
+                last_hp = op_hp
                 my_turn += 1
 
                 sum_damage += my_standard_damage
                 if my_turn % 3 == 0:
                     if op_helmet_ability == "Только мечом" and int(random.random() * 100) <= 14:
                         sum_damage += int(my_second_item_damage * 0.8)
+                        only_sword_flag = 1
                     else:
                         sum_damage += my_second_item_damage
                     if op_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
-                        continue
+                        wisdom_of_ara_flag = 1
                     elif op_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
-                        my_hp -= int(sum_damage * (1 - my_armour))
+                        my_hp -= int(sum_damage * (1 - my_armor))
+                        poisonous_armor_flag = 1
                     else:
-                        op_hp -= int(sum_damage * (1 - op_armour))
+                        op_hp -= int(sum_damage * (1 - op_armor))
                 else:
                     sum_damage += my_first_item_damage
                     if op_chest_plate_ability == "Без наворотов" and int(random.random() * 100) <= 14:
-                        op_hp -= int(sum_damage * (1 - op_armour))
+                        op_hp -= int(sum_damage * (1 - op_armor))
+                        no_mods_flag = 1
                     else:
                         if my_item_ability == "Критовый попуг" and int(random.random() * 100) <= 4:
                             sum_damage = int(sum_damage * 1.4)
+                            krit_perrot_flag = 1
                         elif my_item_ability == "Снаряжение новичка":
                             sum_damage += int(my_first_item_damage * 0.01)
                         if op_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
-                            continue
+                            wisdom_of_ara_flag = 1
                         elif op_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
                             if my_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
                                 my_hp -= sum_damage
+                                gods_killer_flag = 1
+                                poisonous_armor_flag = 1
                             else:
-                                my_hp -= int(sum_damage * (1 - my_armour))
+                                my_hp -= int(sum_damage * (1 - my_armor))
+                                poisonous_armor_flag = 1
                         else:
                             if my_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
                                 op_hp -= sum_damage
                             else:
-                                op_hp -= int(sum_damage * (1 - op_armour))
+                                op_hp -= int(sum_damage * (1 - op_armor))
 
-                bot.send_message(my_id, "")
-                bot.send_message(op_id, "")
+                mods_attack_list = []
+                mods_defend_list = []
+
+                if wisdom_of_ara_flag == 1:
+                    mods_defend_list.append("Мудрость древних ара")
+                if only_sword_flag == 1:
+                    mods_defend_list.append("Только мечом")
+                if poisonous_armor_flag == 1:
+                    mods_defend_list.append("Ядовитые доспехи")
+                if no_mods_flag == 1:
+                    mods_attack_list.append("Без наворотов")
+                if gods_killer_flag == 1:
+                    mods_attack_list.append("Убийца богов")
+                if krit_perrot_flag == 1:
+                    mods_attack_list.append("Критовый попуг")
+
+                bot.send_message(my_id, f'Атакует - {db.fetchone("player", my_id, "pet_name")} \n' +
+                                        f'Моды, использованные в раунде: {mods_attack_list} \n' +
+                                        f'Всего урона с модификаторами: {sum_damage} \n' +
+                                        f'Защищается - {db.fetchone("player", op_id, "pet_name")} \n' +
+                                        f'Моды, использованные в раунде: {mods_defend_list} \n' +
+                                        f'Всего получено урона: {last_hp - op_hp}')
+
+                bot.send_message(op_id, f'Атакует - {db.fetchone("player", my_id, "pet_name")} \n' +
+                                        f'Моды, использованные в раунде: {mods_attack_list} \n' +
+                                        f'Всего урона с модификаторами: {sum_damage} \n' +
+                                        f'Защищается - {db.fetchone("player", op_id, "pet_name")} \n' +
+                                        f'Моды, использованные в раунде: {mods_defend_list} \n' +
+                                        f'Всего получено урона: {last_hp - op_hp}')
                 attacker = "opponent"
 
             else:
@@ -515,46 +573,88 @@ def attack_user(call):
                 if op_turn % 3 == 0:
                     if my_helmet_ability == "Только мечом" and int(random.random() * 100) <= 14:
                         sum_damage += int(op_second_item_damage * 0.8)
+                        only_sword_flag = 1
                     else:
                         sum_damage += op_second_item_damage
                     if my_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
-                        continue
+                        wisdom_of_ara_flag = 1
                     elif my_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
-                        op_hp -= int(sum_damage * (1 - op_armour))
+                        op_hp -= int(sum_damage * (1 - op_armor))
+                        poisonous_armor_flag = 1
                     else:
-                        my_hp -= int(sum_damage * (1 - my_armour))
+                        my_hp -= int(sum_damage * (1 - my_armor))
                 else:
                     sum_damage += op_first_item_damage
                     if my_chest_plate_ability == "Без наворотов" and int(random.random() * 100) <= 14:
-                        my_hp -= int(sum_damage * (1 - my_armour))
+                        my_hp -= int(sum_damage * (1 - my_armor))
+                        no_mods_flag = 1
                     else:
                         if op_item_ability == "Критовый попуг" and int(random.random() * 100) <= 4:
                             sum_damage = int(sum_damage * 1.4)
+                            krit_perrot_flag = 1
                         elif op_item_ability == "Снаряжение новичка":
                             sum_damage += int(op_first_item_damage * 0.01)
                         if my_helmet_ability == "Мудрость древних ара" and int(random.random() * 100) <= 9:
-                            continue
+                            wisdom_of_ara_flag = 1
                         elif my_chest_plate_ability == "Ядовитые доспехи" and int(random.random() * 100) <= 4:
                             if op_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
                                 op_hp -= sum_damage
+                                poisonous_armor_flag = 1
+                                gods_killer_flag = 1
                             else:
-                                op_hp -= int(sum_damage * (1 - op_armour))
+                                op_hp -= int(sum_damage * (1 - op_armor))
+                                poisonous_armor_flag = 1
                         else:
                             if op_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
                                 my_hp -= sum_damage
+                                gods_killer_flag = 1
                             else:
-                                my_hp -= int(sum_damage * (1 - my_armour))
+                                my_hp -= int(sum_damage * (1 - my_armor))
 
-                bot.send_message(my_id, "")
-                bot.send_message(op_id, "")
+                mods_attack_list = []
+                mods_defend_list = []
+
+                if wisdom_of_ara_flag == 1:
+                    mods_defend_list.append("Мудрость древних ара")
+                if only_sword_flag == 1:
+                    mods_defend_list.append("Только мечом")
+                if poisonous_armor_flag == 1:
+                    mods_defend_list.append("Ядовитые доспехи")
+                if no_mods_flag == 1:
+                    mods_attack_list.append("Без наворотов")
+                if gods_killer_flag == 1:
+                    mods_attack_list.append("Убийца богов")
+                if krit_perrot_flag == 1:
+                    mods_attack_list.append("Критовый попуг")
+
+                bot.send_message(my_id, f'Атакует - {db.fetchone("player", op_id, "pet_name")} \n' +
+                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
+                                 f'Всего урона с модификаторами: {sum_damage} \n' +
+                                 f'Защищается - {db.fetchone("player", my_id, "pet_name")} \n' +
+                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
+                                 f'Всего получено урона: {last_hp - my_hp}')
+
+                bot.send_message(op_id, f'Атакует - {db.fetchone("player", op_id, "pet_name")} \n' +
+                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
+                                 f'Всего урона с модификаторами: {sum_damage} \n' +
+                                 f'Защищается - {db.fetchone("player", my_id, "pet_name")} \n' +
+                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
+                                 f'Всего получено урона: {last_hp - my_hp}')
+
                 attacker = "me"
 
         if my_hp <= 0:
-            bot.send_message(my_id, "")
-            bot.send_message(op_id, "")
-        else :
-            bot.send_message(my_id, "")
-            bot.send_message(op_id, "")
+            stolen_cookies = int(random.random() * db.fetchone("player", my_id, "balance") / 5)
+            bot.send_message(my_id, f'Победитель - {db.fetchone("player", op_id, "pet_name")} \n'
+                             f'он крадет у {db.fetchone("player", my_id, "pet_name")} {stolen_cookies} \n')
+            bot.send_message(op_id, f'Победитель - {db.fetchone("player", op_id, "pet_name")} \n'
+                             f'он крадет у {db.fetchone("player", my_id, "pet_name")} {stolen_cookies} \n')
+        else:
+            stolen_cookies = int(random.random() * db.fetchone("player", op_id, "balance") / 5)
+            bot.send_message(my_id, f'Победитель - {db.fetchone("player", my_id, "pet_name")} \n'
+                             f'он крадет у {db.fetchone("player", op_id, "pet_name")} {stolen_cookies} \n')
+            bot.send_message(op_id, f'Победитель - {db.fetchone("player", op_id, "pet_name")} \n'
+                             f'он крадет у {db.fetchone("player", op_id, "pet_name")} {stolen_cookies} \n')
 
     elif call.data == "cancel":
         bot.edit_message_text(chat_id=call.message.chat.id,
