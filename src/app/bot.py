@@ -532,6 +532,7 @@ def attack_user(call):
                         else:
                             if my_item_ability == "Убийца богов" and int(random.random() * 100) <= 4:
                                 op_hp -= sum_damage
+                                gods_killer_flag = 1
                             else:
                                 op_hp -= int(sum_damage * (1 - op_armor))
 
@@ -569,6 +570,7 @@ def attack_user(call):
             else:
                 op_turn += 1
                 sum_damage += op_standard_damage
+                last_hp = my_hp
 
                 if op_turn % 3 == 0:
                     if my_helmet_ability == "Только мечом" and int(random.random() * 100) <= 14:
