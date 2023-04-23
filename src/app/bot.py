@@ -434,6 +434,113 @@ def suspect(message: Message):
     bot.send_video(message.chat.id, video=video)
 
 
+kb = InlineKeyboardMarkup(row_width=1)
+btn_change = InlineKeyboardButton(text='Заменить', callback_data='change')
+kb.add(btn_change)
+btn_dont_change = InlineKeyboardButton(text='Не менять', callback_data='dont change')
+kb.add(btn_dont_change)
+
+
+@bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
+def switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare):
+    print()
+
+
+bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри"
+                    "Футболка фаната AC/DC", "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви", "Эгида солнечного пламени"
+                    "Гитара", "Палочки для риса", "Длинный меч", "Катана Арасаки", "Грань бесконечности"
+                    "Водяной пистолет", "Миска рис еда", "Лук империи Майя", "Пистолет Джонни Сильверхенда", "Убийца кракенов"]
+
+silver_case_list = ["Пакет из под чипсов", "Летняя панамка", "Маска Джейсона", "Маска злодея из Скуби-Ду", "Шапка Мономаха"
+                    "Плащ разведкорпуса", "Черный плащ", "Костюм на Хэллоуин", "Костюм Человека-паука", "Прикид Майкла Джексона"
+                    "Боксерские перчатки Рокки", "Французский багет", "Резиновая утка", "Лестница из фильма про Джеки Чана", "Топор викинга"
+                    "Йо-йо", "Руки из Хаги ваги", "Хук Пуджа", "Лассо Индианы Джонса", "Требушет"]
+
+golden_case_list = ["Маска Жнеца", "Шапка хиппи", "Противогаз", "Маска Кайла Крейна", "Любимая кепка босса"
+                    "Костюм космонавта", "Халат ученого", "Mark 7", "Куртка ночного бегуна", "Косплей"
+                    "Межгалактический звездолет", "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
+                    "Пулемет Чака Норриса", "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
+
+
+def get_item_from_case(person_id, case_type):
+    result = int(random.random() * 100)
+    type_result = int(random.random() * 4)
+    list_navigator = type_result
+    number_of_item_in_list = 0
+
+    item_name = ""
+    item_type = ""
+    item_stats = 0
+    item_mod = "Пусто"
+    item_rare = ""
+
+    case_list = []
+    match case_type:
+        case "bronze":
+            case_list = bronze_case_list
+        case "silver":
+            case_list = silver_case_list
+        case "gold":
+            case_list = golden_case_list
+
+    if result < 35:
+        item_rare = "обычный"
+        number_of_item_in_list = 0
+
+    elif result < 70:
+        item_rare = "обычный"
+        number_of_item_in_list = 1
+
+    elif result < 84:
+        item_rare = "редкий"
+        number_of_item_in_list = 2
+
+    elif result < 98:
+        item_rare = "редкий"
+        number_of_item_in_list = 3
+
+    else:
+        item_rare = "эпический"
+        number_of_item_in_list = 4
+
+    item_name = case_list[list_navigator * 5 + number_of_item_in_list]
+    level = int(db.fetchone(table="player", column="level", id=person_id))
+    if item_type == 0:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 2 * math.sqrt(random.random() * 30 + 15))
+        mod_random = random.random() * 100
+        if mod_random < 80:
+            mod_random = "Госстандарт"
+        elif mod_random < 95:
+            mod_random = "Только мечом"
+        else:
+            mod_random = "Мудрость древних ара"
+    elif item_type == 1:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 0.05 * math.sqrt(random.random() * 30 + 15))
+        mod_random = random.random() * 100
+        if mod_random < 80:
+            mod_random = "Пернатая броня"
+        elif mod_random < 95:
+            mod_random = "Без наворотов"
+        else:
+            mod_random = "Ядовитые доспехи"
+    elif item_type == 2:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 0.5 * math.sqrt(random.random() * 30 + 15))
+        mod_random = random.random() * 100
+        if mod_random < 85:
+            mod_random = "Снаряжение новичка"
+        elif mod_random < 95:
+            mod_random = "Критовый попуг"
+        else:
+            mod_random = "Убийца богов"
+    elif item_type == 3:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 0.8 * math.sqrt(random.random() * 30 + 15))
+    switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare)
+
+
 def experience_change(person_id, experience):
     lvl_from_table = int(db.fetchone(table="player", column="level", id=person_id))
     exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
@@ -443,6 +550,8 @@ def experience_change(person_id, experience):
         lvl_from_table += 1
         exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
         db.set_lvl(person_id, 1)
+        db.set_hp(person_id, )
+        db.set_strength(person_id, )
     db.set_exp(person_id, exp_got)
     db.save()
 
