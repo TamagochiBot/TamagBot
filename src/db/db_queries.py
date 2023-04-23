@@ -116,6 +116,16 @@ class DataBase:
             return count
         except:
             return 0
+    
+    def get_last_regular(self)->int:
+        try:
+            data = self.__cursor.execute(f"""SELECT MAX(id) FROM regular_event""").fetchone()
+            if data is None:
+                return 0
+            else:
+                return data[0]
+        except:
+            return 0
 
     def save(self) -> None:
         """
