@@ -48,17 +48,30 @@ def MarkupFromList(listOfButtons):
         markup.add(btn)
     return markup
 
-def notification_event(message: Message):
-    table='event'
-    id=message.from_user.id
-    bot.send_message(message.chat.id,text=f'Ваш ивент:\n'
+def run_threaded(message: Message, id:int, table:str):
+    Thread(target=notification_event,kwargs={"message":message,"id":id,"table":table}).start()
+    return schedule.CancelJob
+
+
+
+def notification_event(message: Message,id:int, table: str):
+    print(table, id)
+    if table == "event":
+        bot.send_message(message.chat.id,text=f'Ваш ивент:\n'
                                           f'{db.fetchone(table=table, id=id, column="event_name")}\n'
                                           f'Описание: {db.fetchone(table=table, id=id, column="description")}\n'
-                                          f'Опыт: {db.fetchone(table=table, id=id, column="experience")}\n\n'
+                                          f'Опыт: {db.fetchone(table=table, id=id, column="experience")}\n'
                                           f'Закончился!'
-                     )
-    db.delete_event(message.from_user.id)
-    return schedule.CancelJob
+        )
+        db.delete_event(id)
+    else:
+        bot.send_message(message.from_user.id,text=f'Ваш ивент:\n'
+                                          f'{db.fetchone(table=table, id=id, column="event_name")}\n'
+                                          f'Описание: {db.fetchone(table=table, id=id, column="description")}\n'
+                                          f'Опыт: {db.fetchone(table=table, id=id, column="experience")}\n'
+                                          f'Участники: {db.fetchone(table=table, id=id, column="list_of_players")}'
+        )
+    #return schedule.CancelJob
 
 
 
@@ -338,31 +351,31 @@ def create_event(message: Message):
     event_type = str(types[message.from_user.id])
 
     table = "event" if event_type == "unregular" else "regular_event"
-    user_id = message.from_user.id if table == "event" else last_regular_event
+    id = message.from_user.id if table == "event" else last_regular_event
 
     match current_state:
         case 'event_name':
-            db.update(table=table, column='event_name', id=user_id, data=message.text)
+            db.update(table=table, column='event_name', id=id, data=message.text)
             bot.send_message(message.chat.id, 'Напишите описание ивента')
             states[message.from_user.id] = 'event_description'
         case 'event_description':
-            db.update(table=table, column='description', id=user_id, data=message.text)
+            db.update(table=table, column='description', id=id, data=message.text)
             bot.send_message(message.chat.id, 'Выберите количество опыта за выполнение')
             states[message.from_user.id] = 'event_exp'
         case 'event_exp':
             if str.isdigit(message.text):
-                db.update(table=table, column='experience', id=user_id, data=int(message.text))
+                db.update(table=table, column='experience', id=id, data=int(message.text))
                 bot.send_message(message.chat.id, 'Укажите дедлайн в секундах')
                 states[message.from_user.id] = 'event_deadline'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
                 #states[message.from_user.id] = 'event_exp' нахера это делать?
         case 'event_deadline':
-            db.update(table=table, column='deadline', id=user_id, data=message.text)
+            db.update(table=table, column='deadline', id=id, data=message.text)
             db.save()
-            #event_id = last_regular_event if table == "regular_event" else message.from_user.id
+            #print(table, event_id)
             #time = int(db.fetchone(table=table,id=event_id, column='deadline'))
-            schedule.every(int(message.text)).seconds.do(notification_event,message=message).tag(message.from_user.id)
+            schedule.every(int(message.text)).seconds.do(run_threaded,table=table, id=id, message=message)#.tag(message.from_user.id)
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
         case _:
