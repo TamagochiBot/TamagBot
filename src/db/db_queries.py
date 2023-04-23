@@ -74,6 +74,12 @@ class DataBase:
                 self.__update_regular_event(id,column,data)
             case _:
                 raise ValueError(f"Table does not exist")
+    
+    def set_exp(self, id:int, exp:int) -> None:
+        self.update("player", id, "experience", exp)
+
+    def set_lvl(self, id:int, lvl:int) -> None:
+        self.update("player", id, "level", lvl)
 
     def fetchone(self, table: str, id: int, column: str, type_of_item:str = ''):
         '''
