@@ -7,11 +7,15 @@ import schedule
 from threading import Thread
 import time as tm
 
+
+from PIL import Image
+from PIL import ImageOps
+
 import telebot
 from telebot import custom_filters
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove, CallbackQuery
 
-from db.db_queries import DataBase
+from src.db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
@@ -811,6 +815,94 @@ def attack_user(call):
 
 # БОИ
 
+
+
+#CustomizePet
+
+def CreatePetImage(numberOfBody, numberOfHead, numberOfWeapon):
+    '''Пример wayToBody=Body1.png'''
+    wayToBody="app/Images/Body" + numberOfBody + ".png"
+    wayToHead = "app/Images/Head" + numberOfHead + ".png"
+    wayToWeapon = "app/Images/Weapon" + numberOfWeapon + ".png"
+    weaponImage = Image.open(wayToWeapon)
+    bodyImage=Image.open(wayToBody)
+    headImage=Image.open(wayToHead)
+    bodyWithHeadImage=Image.alpha_composite(bodyImage,headImage)
+    petImage=Image.alpha_composite(bodyWithHeadImage,weaponImage)
+    return petImage
+
+def CreateVersusImage(firstPet,secondPet):
+    versusImage=Image.open("Versus.png")
+    firstPet=ImageOps.mirror(firstPet)
+    newImage = Image.new("RGBA", (2000, 768))
+    newImage.paste(firstPet,(0,0))
+    newImage.paste(versusImage,(768,0))
+    newImage.paste(secondPet,(1232,0))
+    return newImage
+
+@bot.message_handler(commands=["customizePet"])
+def CustomizePet(message: Message):
+    #curImageSet и availableItems нужно получать из БД
+    curImageSet={"Head":"1", "Body":"1", "Weapon":"0"}
+    petImage=CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
+    bot.send_message(message.chat.id, "Ваш текущий персонаж:")
+    bot.send_photo(message.chat.id, petImage)
+    markupToCustomize=MarkupFromList(["Голову","Тело","Оружие"])
+    bot.send_message(message.chat.id, "Что вы хотите изменить?",reply_markup=markupToCustomize)
+    states[message.from_user.id] = 'choose_part_to_change'
+
+@bot.message_handler(func=lambda message: message.from_user.id in states and
+                                          states[message.from_user.id] in [
+                                              'choose_part_to_change',
+                                              'change_head',
+                                              'change_body',
+                                              'change_weapon'
+                                          ])
+def Customizing(message: Message):
+    current_state=str(states[message.from_user.id])
+    curImageSet = {"Head": "1", "Body": "1", "Weapon": "0"}
+    availableItems = {"Head": ["1", "2"], "Body": ["1", "2"], "Weapon": ["0", "1"]}
+
+    match current_state:
+        case "choose_part_to_change":
+            match message.text:
+                case "Голову":
+                    markupToCustomize = MarkupFromList(availableItems["Head"])
+                    bot.send_message(message.chat.id, "Текущая: " + curImageSet["Head"] + ". Доступные:",
+                                     reply_markup=markupToCustomize)
+                    states[message.from_user.id] = 'change_head'
+
+                case "Тело":
+                    markupToCustomize = MarkupFromList(availableItems["Body"])
+                    bot.send_message(message.chat.id, "Текущая: " + curImageSet["Body"] + ". Доступные:",
+                                     reply_markup=markupToCustomize)
+                    states[message.from_user.id] = 'change_body'
+
+                case "Оружие":
+                    markupToCustomize = MarkupFromList(availableItems["Weapon"])
+                    bot.send_message(message.chat.id, "Текущее: " + curImageSet["Weapon"] + ". Доступные:",
+                                     reply_markup=markupToCustomize)
+                    states[message.from_user.id] = 'change_weapon'
+
+        case 'change_head':
+            curImageSet["Head"] = message.text
+            petImage = CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
+            bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
+            bot.send_photo(message.chat.id, petImage)
+
+        case 'change_body':
+            curImageSet["Body"] = message.text
+            petImage = CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
+            bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
+            bot.send_photo(message.chat.id, petImage)
+
+        case 'change_weapon':
+            curImageSet["Weapon"] = message.text
+            petImage = CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
+            bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
+            bot.send_photo(message.chat.id, petImage)
+
+#CustomizePet
 
 def run_polling():
     print("Bot has been started...")
