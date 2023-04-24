@@ -47,6 +47,15 @@ class DataBase:
     def set_balance(self, id:int, balance:int) -> None:
         self.__update_player(id, "balance", balance)
 
+    def set_head_skin(self, id:int, skin:str) -> None:
+        self.__update_player(id, "head_skin", skin)
+
+    def set_body_skin(self, id:int, skin:str) -> None:
+        self.__update_player(id, "body_skin", skin)
+    
+    def set_weapon_skin(self, id:int, skin:str) -> None:
+        self.__update_player(id, "weapon_skin", skin)
+
     def get_player_id(self,user_name:str) -> int:
         '''
         gets player id by user_name
@@ -78,6 +87,15 @@ class DataBase:
 
     def get_balance(self, id:int) -> int:
         return self.__fetchone_player(id, "balance")
+
+    def get_head_skin(self, id:int) -> str:
+        return self.__fetchone_player(id, "head_skin")
+    
+    def get_body_skin(self, id:int) -> str:
+        return self.__fetchone_player(id, "body_skin")
+    
+    def get_weapon_skin(self, id:int) -> str:
+        return self.__fetchone_player(id, "weapon_skin")
 
     def is_admin(self, id:int) -> bool:
         return bool(self.__fetchone_player(id,"is_admin"))

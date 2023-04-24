@@ -21,7 +21,10 @@ def init():
             pet_name VARCHAR(40) NOT NULL DEFAULT 'UNKNOWN',
             health INTEGER NOT NULL DEFAULT 100,
             strength INTEGER NOT NULL DEFAULT 0,
-            weapon_damage INTEGER NOT NULL DEFAULT 0
+            weapon_damage INTEGER NOT NULL DEFAULT 0,
+            head_skin TEXT NOT NULL DEFAULT 'default',
+            body_skin TEXT NOT NULL DEFAULT 'default',
+            weapon_skin TEXT NOT NULL DEFAULT 'default'
             );
     ''')
 
