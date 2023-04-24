@@ -206,9 +206,9 @@ def create_event(message: Message):
             db.save()
 
             event_data = list()
-            event_data.append(db.fetchone(table=table, id=id, column="event_name"))
-            event_data.append(db.fetchone(table=table, id=id, column="description"))
-            event_data.append(db.fetchone(table=table, id=id, column="experience"))
+            event_data.append(db.get_event_name(id))
+            event_data.append(db.get_event_description(id))
+            event_data.append(db.get_event_experience(id))
 
             schedule.every(int(message.text)).seconds.do(run_threaded,table=table, id=id, message=message,event_data=event_data)#.tag(message.from_user.id)
             bot.send_message(message.chat.id, text='Ивент успешно создан')
@@ -255,10 +255,10 @@ def delete_regular(message: Message):
 
 
 def describe_event(id: int, table: str) -> None:
-    bot.send_message(id, text=f'\nИвент: {db.fetchone(table=table, id=id, column="event_name")}\n'
-                              f'Описание: {db.fetchone(table=table, id=id, column="description")}\n'
-                              f'Опыт: {db.fetchone(table=table, id=id, column="experience")}\n'
-                              f'Дедлайн: {db.fetchone(table=table, id=id, column="deadline")}\n\n')
+    bot.send_message(id, text=f'\nИвент: {db.get_event_name(id)}\n'
+                              f'Описание: {db.get_event_description(id)}\n'
+                              f'Опыт: {db.get_event_experience(id)}\n'
+                              f'Дедлайн: {db.get_event_deadline(id)}\n\n')
 
 
 @bot.message_handler(commands=['edit_event'])
@@ -504,7 +504,7 @@ def get_item_from_case(person_id, case_type):
         number_of_item_in_list = 4
 
     item_name = case_list[list_navigator * 5 + number_of_item_in_list]
-    level = int(db.fetchone(table="player", column="level", id=person_id))
+    level = int(db.get_level(person_id))
     if item_type == 0:
         item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                          * 2 * math.sqrt(random.random() * 30 + 15))
@@ -542,15 +542,15 @@ def get_item_from_case(person_id, case_type):
 
 
 def experience_change(person_id, experience):
-    lvl_from_table = int(db.fetchone(table="player", column="level", id=person_id))
+    lvl_from_table = int(db.get_level(person_id))
     exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
-    exp_got = db.fetchone(table="player", column="experience") + experience
+    exp_got = db.get_experience(person_id) + experience
     while exp_got >= exp_needed:
         exp_got -= exp_needed
         lvl_from_table += 1
         exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
         db.set_lvl(person_id, 1)
-        db.set_hp(person_id, )
+        db.set_health(person_id, )
         db.set_strength(person_id, )
     db.set_exp(person_id, exp_got)
     db.save()
@@ -595,8 +595,8 @@ def attack_user(call):
 
     if call.data == "accept":
 
-        my_standard_damage = int(db.fetchone(table="player", column="strength", id=my_id))
-        op_standard_damage = int(db.fetchone(table="player", column="strength", id=op_id))
+        my_standard_damage = int(db.get_strength(my_id))
+        op_standard_damage = int(db.get_strength(op_id))
         my_first_item_damage = db.get_item_stats(my_id, "item1")
         op_first_item_damage = db.get_item_stats(op_id, "item1")
         my_second_item_damage = db.get_item_stats(my_id, "item2")
@@ -613,13 +613,13 @@ def attack_user(call):
         op_chest_plate_ability = db.get_item_mod(op_id, "chestplate")
 
         if my_helmet_ability == "Госстандарт":
-            my_hp = int(int(db.fetchone(table="player", column="health", id=my_id)) * 1.05) + my_helmet_hp
+            my_hp = int(int(db.get_health(my_id)) * 1.05) + my_helmet_hp
         else:
-            my_hp = int(db.fetchone(table="player", column="health", id=my_id)) + my_helmet_hp
+            my_hp = int(db.get_health(my_id)) + my_helmet_hp
         if op_helmet_ability == "Госстандарт":
-            op_hp = int(int(db.fetchone(table="player", column="health", id=op_id)) * 1.05) + op_helmet_hp
+            op_hp = int(int(db.get_health(op_id)) * 1.05) + op_helmet_hp
         else:
-            op_hp = int(db.fetchone(table="player", column="health", id=op_id)) + op_helmet_hp
+            op_hp = int(db.get_health(op_id)) + op_helmet_hp
 
         my_armor = my_chest_plate_armor
         op_armor = op_chest_plate_armor
@@ -699,17 +699,17 @@ def attack_user(call):
                 if krit_perrot_flag == 1:
                     mods_attack_list.append("Критовый попуг")
 
-                bot.send_message(my_id, f'Атакует - {db.fetchone("player", my_id, "pet_name")} \n' +
+                bot.send_message(my_id, f'Атакует - {db.get_pet_name(my_id)} \n' +
                                         f'Моды, использованные в раунде: {mods_attack_list} \n' +
                                         f'Всего урона с модификаторами: {sum_damage} \n' +
-                                        f'Защищается - {db.fetchone("player", op_id, "pet_name")} \n' +
+                                        f'Защищается - {db.get_pet_name(op_id)} \n' +
                                         f'Моды, использованные в раунде: {mods_defend_list} \n' +
                                         f'Всего получено урона: {last_hp - op_hp}')
 
-                bot.send_message(op_id, f'Атакует - {db.fetchone("player", my_id, "pet_name")} \n' +
+                bot.send_message(op_id, f'Атакует - {db.get_pet_name(my_id)} \n' +
                                         f'Моды, использованные в раунде: {mods_attack_list} \n' +
                                         f'Всего урона с модификаторами: {sum_damage} \n' +
-                                        f'Защищается - {db.fetchone("player", op_id, "pet_name")} \n' +
+                                        f'Защищается - {db.get_pet_name(op_id)} \n' +
                                         f'Моды, использованные в раунде: {mods_defend_list} \n' +
                                         f'Всего получено урона: {last_hp - op_hp}')
                 attacker = "opponent"
@@ -776,34 +776,34 @@ def attack_user(call):
                 if krit_perrot_flag == 1:
                     mods_attack_list.append("Критовый попуг")
 
-                bot.send_message(my_id, f'Атакует - {db.fetchone("player", op_id, "pet_name")} \n' +
+                bot.send_message(my_id, f'Атакует - {db.get_pet_name(op_id)} \n' +
                                  f'Моды, использованные в раунде: {mods_attack_list} \n' +
                                  f'Всего урона с модификаторами: {sum_damage} \n' +
-                                 f'Защищается - {db.fetchone("player", my_id, "pet_name")} \n' +
+                                 f'Защищается - {db.get_pet_name(my_id)} \n' +
                                  f'Моды, использованные в раунде: {mods_defend_list} \n' +
                                  f'Всего получено урона: {last_hp - my_hp}')
 
-                bot.send_message(op_id, f'Атакует - {db.fetchone("player", op_id, "pet_name")} \n' +
+                bot.send_message(op_id, f'Атакует - {db.get_pet_name(op_id)} \n' +
                                  f'Моды, использованные в раунде: {mods_attack_list} \n' +
                                  f'Всего урона с модификаторами: {sum_damage} \n' +
-                                 f'Защищается - {db.fetchone("player", my_id, "pet_name")} \n' +
+                                 f'Защищается - {db.get_pet_name(my_id)} \n' +
                                  f'Моды, использованные в раунде: {mods_defend_list} \n' +
                                  f'Всего получено урона: {last_hp - my_hp}')
 
                 attacker = "me"
 
         if my_hp <= 0:
-            stolen_cookies = int(random.random() * db.fetchone("player", my_id, "balance") / 5)
-            bot.send_message(my_id, f'Победитель - {db.fetchone("player", op_id, "pet_name")} \n'
-                             f'он крадет у {db.fetchone("player", my_id, "pet_name")} {stolen_cookies} \n')
-            bot.send_message(op_id, f'Победитель - {db.fetchone("player", op_id, "pet_name")} \n'
-                             f'он крадет у {db.fetchone("player", my_id, "pet_name")} {stolen_cookies} \n')
+            stolen_cookies = int(random.random() * db.get_balance(my_id) / 5)
+            bot.send_message(my_id, f'Победитель - {db.get_pet_name(op_id)} \n'
+                             f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
+            bot.send_message(op_id, f'Победитель - {db.get_pet_name(op_id)} \n'
+                             f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
         else:
-            stolen_cookies = int(random.random() * db.fetchone("player", op_id, "balance") / 5)
-            bot.send_message(my_id, f'Победитель - {db.fetchone("player", my_id, "pet_name")} \n'
-                             f'он крадет у {db.fetchone("player", op_id, "pet_name")} {stolen_cookies} \n')
-            bot.send_message(op_id, f'Победитель - {db.fetchone("player", op_id, "pet_name")} \n'
-                             f'он крадет у {db.fetchone("player", op_id, "pet_name")} {stolen_cookies} \n')
+            stolen_cookies = int(random.random() * db.get_balance(op_id) / 5)
+            bot.send_message(my_id, f'Победитель - {db.get_pet_name(my_id)} \n'
+                             f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
+            bot.send_message(op_id, f'Победитель - {db.get_pet_name(op_id)} \n'
+                             f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
 
     elif call.data == "cancel":
         bot.edit_message_text(chat_id=call.message.chat.id,
