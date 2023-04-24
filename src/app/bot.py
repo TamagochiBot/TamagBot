@@ -11,11 +11,11 @@ import telebot
 from telebot import custom_filters
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove, CallbackQuery
 
-from src.db.db_queries import DataBase
+from db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
-from TamagBot.src.app.player import Player
+from app.player import Player
 
 player_info = Player()
 
