@@ -829,6 +829,8 @@ def CreatePetImage(numberOfBody, numberOfHead, numberOfWeapon):
     headImage=Image.open(wayToHead)
     bodyWithHeadImage=Image.alpha_composite(bodyImage,headImage)
     petImage=Image.alpha_composite(bodyWithHeadImage,weaponImage)
+    whiteBackgroung=Image.new("RGBA",(768,768),(255,255,255))
+    petImage=Image.alpha_composite(whiteBackgroung,petImage)
     return petImage
 
 def CreateVersusImage(firstPet,secondPet):
@@ -861,7 +863,7 @@ def CustomizePet(message: Message):
 def Customizing(message: Message):
     current_state=str(states[message.from_user.id])
     curImageSet = {"Head": "1", "Body": "1", "Weapon": "0"}
-    availableItems = {"Head": ["1", "2"], "Body": ["1", "2"], "Weapon": ["0", "1"]}
+    availableItems = {"Head": ["1", "2","3","4","5"], "Body": ["1", "2","3","4","5"], "Weapon": ["0", "1","2","3","4","5"]}
 
     match current_state:
         case "choose_part_to_change":
