@@ -15,7 +15,7 @@ from db.db_queries import DataBase
 
 db = DataBase('testDB.db')
 
-from app.player import Player
+from src.app.player import Player
 
 player_info = Player()
 
@@ -105,7 +105,7 @@ def start_message(message: Message):
 @bot.message_handler(func=lambda message: message.from_user.id in states and
                                           states[message.from_user.id] == 'registry')
 def registration(message: Message):
-    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.first_name)
+    db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.username)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
     del states[message.from_user.id]
 
