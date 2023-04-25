@@ -127,6 +127,13 @@ def start_message(message: Message):
 def registration(message: Message):
     db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.username)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
+    db.add_body_skin(message.from_user.id, "1")
+    db.add_head_skin(message.from_user.id, "1")
+    db.add_weapon_skin(message.from_user.id, "0")
+    db.set_body_skin(message.from_user.id, "1")
+    db.set_head_skin(message.from_user.id, "1")
+    db.set_weapon_skin(message.from_user.id, "0")
+    db.save()
     del states[message.from_user.id]
 
 
@@ -895,12 +902,14 @@ def CreateVersusImage(firstPet,secondPet):
 
 @bot.message_handler(commands=["customizePet"])
 def CustomizePet(message: Message):
-    #curImageSet и availableItems нужно получать из БД
-    curImageSet={"Head":"1", "Body":"1", "Weapon":"0"}
-    petImage=CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
+    cur_body=db.get_body_skin(message.from_user.id)
+    cur_head=db.get_head_skin(message.from_user.id)
+    cur_weapon=db.get_weapon_skin(message.from_user.id)
+
+    petImage=CreatePetImage(cur_body, cur_head, cur_weapon)
     bot.send_message(message.chat.id, "Ваш текущий персонаж:")
     bot.send_photo(message.chat.id, petImage)
-    markupToCustomize=MarkupFromList(["Голову","Тело","Оружие"])
+    markupToCustomize=MarkupFromList(["Голову","Тело","Оружие","Отмена"])
     bot.send_message(message.chat.id, "Что вы хотите изменить?",reply_markup=markupToCustomize)
     states[message.from_user.id] = 'choose_part_to_change'
 
@@ -913,47 +922,76 @@ def CustomizePet(message: Message):
                                           ])
 def Customizing(message: Message):
     current_state=str(states[message.from_user.id])
-    curImageSet = {"Head": "1", "Body": "1", "Weapon": "0"}
-    availableItems = {"Head": ["1", "2","3","4","5"], "Body": ["1", "2","3","4","5"], "Weapon": ["0", "1","2","3","4","5"]}
+    cur_body = db.get_body_skin(message.from_user.id)
+    cur_head = db.get_head_skin(message.from_user.id)
+    cur_weapon = db.get_weapon_skin(message.from_user.id)
+    available_heads=db.get_all_head_skins(message.from_user.id)
+    available_bodies=db.get_all_body_skins(message.from_user.id)
+    available_weapons=db.get_all_weapon_skins(message.from_user.id)
 
     match current_state:
         case "choose_part_to_change":
             match message.text:
                 case "Голову":
-                    markupToCustomize = MarkupFromList(availableItems["Head"])
-                    bot.send_message(message.chat.id, "Текущая: " + curImageSet["Head"] + ". Доступные:",
+                    markupToCustomize = MarkupFromList(available_heads+["Отмена"])
+                    bot.send_message(message.chat.id, "Текущая: " + cur_head + ". Доступные:",
                                      reply_markup=markupToCustomize)
                     states[message.from_user.id] = 'change_head'
 
                 case "Тело":
-                    markupToCustomize = MarkupFromList(availableItems["Body"])
-                    bot.send_message(message.chat.id, "Текущая: " + curImageSet["Body"] + ". Доступные:",
+                    markupToCustomize = MarkupFromList(available_bodies+["Отмена"])
+                    bot.send_message(message.chat.id, "Текущая: " + cur_body + ". Доступные:",
                                      reply_markup=markupToCustomize)
                     states[message.from_user.id] = 'change_body'
 
                 case "Оружие":
-                    markupToCustomize = MarkupFromList(availableItems["Weapon"])
-                    bot.send_message(message.chat.id, "Текущее: " + curImageSet["Weapon"] + ". Доступные:",
+                    markupToCustomize = MarkupFromList(available_weapons+["Отмена"])
+                    bot.send_message(message.chat.id, "Текущее: " + cur_weapon + ". Доступные:",
                                      reply_markup=markupToCustomize)
                     states[message.from_user.id] = 'change_weapon'
 
+                case "Отмена":
+                    bot.send_message(message.chat.id,"Хорошо, изменения отменены",reply_markup=ReplyKeyboardRemove())
+
         case 'change_head':
-            curImageSet["Head"] = message.text
-            petImage = CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
-            bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
-            bot.send_photo(message.chat.id, petImage)
+            cur_head = message.text
+            if cur_head in available_heads:
+                db.set_head_skin(message.from_user.id,cur_head)
+                db.save()
+                petImage = CreatePetImage(cur_body, cur_head, cur_weapon)
+                bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
+                bot.send_photo(message.chat.id, petImage)
+            elif cur_head=="Отмена":
+                bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
+            else:
+                bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
 
         case 'change_body':
-            curImageSet["Body"] = message.text
-            petImage = CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
-            bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
-            bot.send_photo(message.chat.id, petImage)
+            cur_body = message.text
+            if cur_body in available_bodies:
+                db.set_body_skin(message.from_user.id,cur_body)
+                db.save()
+                petImage = CreatePetImage(cur_body, cur_head, cur_weapon)
+                bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
+                bot.send_photo(message.chat.id, petImage)
+            elif cur_body == "Отмена":
+                bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
+            else:
+                bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
 
         case 'change_weapon':
-            curImageSet["Weapon"] = message.text
-            petImage = CreatePetImage(curImageSet["Body"], curImageSet["Head"], curImageSet["Weapon"])
-            bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
-            bot.send_photo(message.chat.id, petImage)
+            cur_weapon = message.text
+            if cur_weapon in available_weapons:
+                db.set_weapon_skin(message.from_user.id,cur_weapon)
+                db.save()
+                petImage = CreatePetImage(cur_body, cur_head, cur_weapon)
+                bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
+                bot.send_photo(message.chat.id, petImage)
+            elif cur_weapon == "Отмена":
+                bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
+            else:
+                bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
+
 
 #CustomizePet
 
