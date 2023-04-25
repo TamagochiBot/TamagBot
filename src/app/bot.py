@@ -834,9 +834,11 @@ def CreatePetImage(numberOfBody, numberOfHead, numberOfWeapon):
     return petImage
 
 def CreateVersusImage(firstPet,secondPet):
-    versusImage=Image.open("Versus.png")
+    versusImage=Image.open("app/Images/Versus.png")
+    whiteBackground=Image.new("RGBA",(464,768),(255,255,255))
+    versusImage=Image.alpha_composite(whiteBackground,versusImage)
     firstPet=ImageOps.mirror(firstPet)
-    newImage = Image.new("RGBA", (2000, 768))
+    newImage = Image.new("RGBA", (2000, 768),(255,255,255))
     newImage.paste(firstPet,(0,0))
     newImage.paste(versusImage,(768,0))
     newImage.paste(secondPet,(1232,0))
