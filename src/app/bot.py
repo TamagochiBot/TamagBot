@@ -435,8 +435,8 @@ def get_events(message: Message):
 #ВЫПОЛНЕНИЕ ИВЕНТОВ
 
 
-@bot.message_handler(func=lambda message: message.text == 'my_debug' and not (message.reply_to_message is None))
-def debugger(message: Message):
+@bot.message_handler(func=lambda message: message.text == 'Выполнить' and not (message.reply_to_message is None))
+def  execute_event(message: Message):
     if db.is_admin(message.from_user.id):
         markup = telebot.types.InlineKeyboardMarkup()
         markup.row_width = 2
