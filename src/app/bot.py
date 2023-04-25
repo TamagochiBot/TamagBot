@@ -1,16 +1,13 @@
 import math
 import os
 import random
-from datetime import datetime
+import time as tm
+from threading import Thread
 
 import schedule
-from threading import Thread
-import time as tm
-
+import telebot
 from PIL import Image
 from PIL import ImageOps
-
-import telebot
 from telebot import custom_filters
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove, CallbackQuery
 
@@ -461,10 +458,18 @@ def execute_event(message: Message):
             experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
             bot.send_message(message.chat.id,
                              f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
-            del execute[message.from_user.id]
         else:
             bot.send_message(message.chat.id, 'Нет такого ивента')
 
+
+@bot.message_handler(commands=['info'])
+def info(message: Message):
+    if message.from_user.id in states:
+        txt = f'{message.from_user.id}\n' \
+              f'{states[message.from_user.id]}'
+        bot.send_message(message.chat.id, txt)
+    else:
+        bot.send_message(message.chat.id, 'akjbrvnajv')
 
  
 @bot.callback_query_handler(
@@ -488,7 +493,6 @@ def admin_access(call: CallbackQuery):
                                   db.get_event_experience(call.from_user.id))
                 bot.send_message(call.message.chat.id,
                                  f'Попуг {db.get_user_name(execute[call.from_user.id])} получил {db.get_event_experience(call.from_user.id)} опыта')
-                del execute[call.from_user.id]
             else:
                 bot.send_message(call.message.chat.id, 'Нет такого ивента')
 
@@ -501,14 +505,10 @@ def choose_event(message: Message):
         if not db.exists(table="regular_event", id=for_execute):
             raise "doesn't exist"
         else:
-            if db.exists(table='regular_event', id=for_execute):
-                # experience_change(execute[message.from_user.id], db.get_regular_experience(for_execute))
-                # bot.send_message(message.chat.id,
-                #                  f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
-                db.add_regular_player(for_execute, execute[message.from_user.id])
-                bot.send_message(message.chat.id, 'Попуг добавлен в список выполения')
-                del execute[message.from_user.id]
-
+            if db.exists(table='event', id=message.from_user.id, column='user_id'):
+                experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
+                bot.send_message(message.chat.id,
+                                 f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
             else:
                 bot.send_message(message.chat.id, 'Нет такого ивента')
     except:
@@ -572,6 +572,10 @@ def switch_item(message: Message, person_id, item_type, item_name, item_stats, i
     bot.send_message(message.chat.id, text="")
 
 
+skin_case_list = ["Кремниевая репа", "Нейронный купол", "Циркуляционная черепно-мозговая крышка", "Бионическая башня"
+                  "Механический торс", "Стальной грудак", "Хромированный бюст", "Титановый каркас", "Кибернетический корпус"
+                  "Кибер-нож", "Лазерный кинжал", "Разрядный коготь", "Бионический трезубец", "Химический меч"]
+
 bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри"
                     "Футболка фаната AC/DC", "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви", "Эгида солнечного пламени"
                     "Гитара", "Палочки для риса", "Длинный меч", "Катана Арасаки", "Грань бесконечности"
@@ -587,15 +591,13 @@ golden_case_list = ["Маска Жнеца", "Шапка хиппи", "Прот�
                     "Межгалактический звездолет", "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
                     "Пулемет Чака Норриса", "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
 
-skin_case_list = []
-
 
 open_case_list = ["Открыть бронзовый сундук", "Открыть серебряный сундук",
                   "Открыть золотой сундук", "Открыть сундук скинов"]
 
 
 @bot.message_handler(func=lambda message: message.text in open_case_list)
-def get_item_from_case(message: Message,  person_id):
+def get_item_from_case(message: Message, person_id, case_type):
     case_type = ""
     if message == open_case_list[0]:
         case_type = "bronze"
@@ -649,7 +651,6 @@ def get_item_from_case(message: Message,  person_id):
         number_of_item_in_list = 4
 
     item_name = case_list[list_navigator * 5 + number_of_item_in_list]
-
     if case_type != "skin":
         level = int(db.get_level(person_id))
         if item_type == 0:
@@ -685,9 +686,9 @@ def get_item_from_case(message: Message,  person_id):
         elif item_type == 3:
             item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                              * 0.8 * math.sqrt(random.random() * 30 + 15))
-        switch_item(message, person_id, item_type, item_name, item_stats, item_mod, item_rare)
+        switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare)
     else:
-        switch_case_item(message, person_id. item_name, item_rare)
+        switch_case_item(message, person_id.item_name, item_rare)
 
 
 def experience_change(person_id, experience):
@@ -698,7 +699,7 @@ def experience_change(person_id, experience):
         exp_got -= exp_needed
         lvl_from_table += 1
         exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
-        factor = lvl_from_table ** (1.2/3.0)
+        factor = lvl_from_table ** (1.2 / 3.0)
         current_health = int(factor * db.get_health(person_id))
         current_strength = int(factor * db.get_strength(person_id))
         db.set_lvl(person_id, lvl_from_table)
@@ -745,7 +746,7 @@ def attack_user(call: CallbackQuery):
     print(call.message.text)
 
     if call.data == "accept":
-    #     bot.send_photo(call.message.chat.id,photo=photo)
+        #     bot.send_photo(call.message.chat.id,photo=photo)
         my_standard_damage = int(db.get_strength(my_id))
         op_standard_damage = int(db.get_strength(op_id))
         my_first_item_damage = db.get_worn_item_stats(my_id, "item1")
@@ -991,8 +992,12 @@ def CreateVersusImage(first_pet, second_pet):
     new_image.paste(second_pet, (1232, 0))
     return new_image
 
-
-@bot.message_handler(commands=["customizePet"])
+'''
+sl_head={3:"Кремниевая репа", 4: "Нейронный купол", 2: "Циркуляционная черепно-мозговая крышка", 1: "Бионическая башня"}
+sl_body={1:"Механический торс", 2:"Стальной грудак", 5: "Хромированный бюст", 3:"Титановый каркас", 4:"Кибернетический корпус"}
+sl_weapon={1:"Кибер-нож", 2:"Лазерный кинжал", 3:"Разрядный коготь", 4:"Бионический трезубец", 5:"Химический меч"}
+'''
+@bot.message_handler(commands=["customize_pet"])
 def CustomizePet(message: Message):
     cur_body = db.get_body_skin(message.from_user.id)
     cur_head = db.get_head_skin(message.from_user.id)
