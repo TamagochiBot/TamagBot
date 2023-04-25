@@ -547,30 +547,56 @@ def suspect(message: Message):
 # FUN
 
 
-kb = InlineKeyboardMarkup(row_width=1)
+kb_it_ce = InlineKeyboardMarkup(row_width=1)
 btn_change = InlineKeyboardButton(text='Заменить', callback_data='change')
-kb.add(btn_change)
+kb_it_ce.add(btn_change)
 btn_dont_change = InlineKeyboardButton(text='Не менять', callback_data='dont change')
-kb.add(btn_dont_change)
+kb_it_ce.add(btn_dont_change)
 
 
-@bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
-def switch_item(message: Message, person_id, item_type, item_name, item_stats, item_mod, item_rare):
+def switch_item_from_case(message: Message, person_id, item_type, item_name, item_stats, item_mod, item_rare):
     db_item_name = ""
+    item_type_for_text = ""
     match item_type:
         case 0:
             db_item_name = "helmet"
+            item_type_for_text = "Шлем"
         case 1:
             db_item_name = "chestplate"
+            item_type_for_text = "Нагрудник"
         case 2:
             db_item_name = "item1"
+            item_type_for_text = "Оружие ближнего боя"
         case 3:
             db_item_name = "item2"
-    current_name = ""
+            item_type_for_text = "Оружие дальнего боя"
+
+    current_name = db.get_worn_item_name(person_id, db_item_name)
     current_stats = db.get_worn_item_stats(person_id, db_item_name)
     current_mod = db.get_worn_item_mod(person_id, db_item_name)
-    current_rare = ""
-    bot.send_message(message.chat.id, text="")
+    current_rare = db.get_worn_item_rare(person_id, db_item_name)
+
+    bot.send_message(message.chat.id, text=f'Ого! Тебе выпал предмет {item_name}! \n'
+                                           f'Хочешь поменять его с {current_name}? \n'
+                                           f'Выпало {item_name}: \n'
+                                           f'Тип: {item_type_for_text} \n'
+                                           f'Редкость: {item_rare} \n'
+                                           f'Статы: {item_stats} \n'
+                                           f'Модификаторы: {item_mod} \n'
+                                           f'Надето {current_name}: \n'
+                                           f'Тип: {item_type_for_text} \n'
+                                           f'Редкость: {current_rare} \n'
+                                           f'Статы: {current_stats} \n'
+                                           f'Модификаторы: {current_mod} \n', reply_markup=kb_it_ce)
+
+
+@bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
+def switching_or_not(person_id, item_type, item_name, item_stats, item_mod, item_rare):
+    print()
+
+
+def switch_skin_item(message: Message, person_id, item_name, item_rare):
+    print()
 
 
 skin_case_list = ["Кремниевая репа", "Нейронный купол", "Циркуляционная черепно-мозговая крышка", "Бионическая башня", "Бинарный котёл",
@@ -687,9 +713,9 @@ def get_item_from_case(message: Message, person_id, case_type):
         elif item_type == 3:
             item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                              * 0.8 * math.sqrt(random.random() * 30 + 15))
-        switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare)
-    #else:
-        #switch_case_item(message, person_id.item_name, item_rare)
+        switch_item_from_case(person_id, item_type, item_name, item_stats, item_mod, item_rare)
+    else:
+        switch_skin_item(message, person_id, item_name, item_rare)
 
 
 def experience_change(person_id, experience):
