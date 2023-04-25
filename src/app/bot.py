@@ -688,8 +688,8 @@ def get_item_from_case(message: Message, person_id, case_type):
             item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                              * 0.8 * math.sqrt(random.random() * 30 + 15))
         switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare)
-    else:
-        switch_case_item(message, person_id.item_name, item_rare)
+    #else:
+        #switch_case_item(message, person_id.item_name, item_rare)
 
 
 def experience_change(person_id, experience):

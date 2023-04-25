@@ -14,6 +14,7 @@ def init():
             balance INTEGER NOT NULL DEFAULT 0,
             level INTEGER NOT NULL DEFAULT 1,
             experience INTEGER NOT NULL DEFAULT 0,
+            cases VARCHAR(40) NOT NULL DEFAULT "0;0;0;0;",
             helmet INTEGER DEFAULT NULL,
             chestplate INTEGER DEFAULT NULL,
             item1 INTEGER DEFAULT NULL,

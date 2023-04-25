@@ -68,6 +68,46 @@ class DataBase:
     def set_weapon_skin(self, id:int, skin:str) -> None:
         self.__update_player(id, "weapon_skin", skin)
 
+    def get_bronze_count(self,id:int) -> int:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        return int(lst[0])
+    
+    def get_silver_count(self,id:int) -> int:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        return int(lst[1])
+    
+    def get_gold_count(self,id:int) -> int:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        return int(lst[2])
+    
+    def get_skin_count(self,id:int) -> int:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        return int(lst[3])
+    
+    def set_bronze_count(self,id:int, count:int) -> None:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        lst[0] = str(count)
+        string = "".join(i + ';' for i in lst if i != '')
+        self.__update_player(id,"cases",string)
+    
+    def set_silver_count(self,id:int, count:int) -> None:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        lst[1] = str(count)
+        string = "".join(i + ';' for i in lst if i != '')
+        self.__update_player(id,"cases",string)
+    
+    def set_gold_count(self,id:int, count:int) -> None:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        lst[2] = str(count)
+        string = "".join(i + ';' for i in lst if i != '')
+        self.__update_player(id,"cases",string)
+    
+    def set_skin_count(self,id:int, count:int) -> int:
+        lst = self.__fetchone_player(id, "cases").split(";")
+        lst[3] = str(count)
+        string = "".join(i + ';' for i in lst if i != '')
+        self.__update_player(id,"cases",string)
+
     def get_all_head_skins(self,id:int) -> list:
         return list(string for string in self.__fetchone_player(id, "available_head_skins").split(";") if string != '')
     
@@ -473,3 +513,10 @@ class DataBase:
             return None
         else:
             return data[0]
+
+db = DataBase("testDB.db")
+#db.create_player(123)
+print(db.get_bronze_count(123))
+db.set_silver_count(123, 12)
+db.save()
+print(db.get_silver_count(123))
