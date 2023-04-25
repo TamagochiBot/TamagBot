@@ -498,8 +498,22 @@ kb.add(btn_dont_change)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
-def switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare):
-    print()
+def switch_item(message: Message, person_id, item_type, item_name, item_stats, item_mod, item_rare):
+    db_item_name = ""
+    match item_type:
+        case 0:
+            db_item_name = "helmet"
+        case 1:
+            db_item_name = "chestplate"
+        case 2:
+            db_item_name = "item1"
+        case 3:
+            db_item_name = "item2"
+    current_name = ""
+    current_stats = db.get_worn_item_stats(person_id, db_item_name)
+    current_mod = db.get_worn_item_mod(person_id, db_item_name)
+    current_rare = ""
+    bot.send_message(message.chat.id, text="")
 
 
 bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри"
@@ -517,15 +531,32 @@ golden_case_list = ["Маска Жнеца", "Шапка хиппи", "Прот�
                     "Межгалактический звездолет", "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
                     "Пулемет Чака Норриса", "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
 
+skin_case_list = []
 
-def get_item_from_case(person_id, case_type):
+
+open_case_list = ["Открыть бронзовый сундук", "Открыть серебряный сундук",
+                  "Открыть золотой сундук", "Открыть сундук скинов"]
+
+
+@bot.message_handler(func=lambda message: message.text in open_case_list)
+def get_item_from_case(message: Message,  person_id):
+    case_type = ""
+    if message == open_case_list[0]:
+        case_type = "bronze"
+    elif message == open_case_list[1]:
+        case_type = "silver"
+    elif message == open_case_list[2]:
+        case_type = "gold"
+    elif message == open_case_list[3]:
+        case_type = "skin"
+
     result = int(random.random() * 100)
     type_result = int(random.random() * 4)
     list_navigator = type_result
     number_of_item_in_list = 0
 
     item_name = ""
-    item_type = ""
+    item_type = type_result
     item_stats = 0
     item_mod = "Пусто"
     item_rare = ""
@@ -538,6 +569,8 @@ def get_item_from_case(person_id, case_type):
             case_list = silver_case_list
         case "gold":
             case_list = golden_case_list
+        case "skin":
+            case_list = skin_case_list
 
     if result < 35:
         item_rare = "обычный"
@@ -560,41 +593,45 @@ def get_item_from_case(person_id, case_type):
         number_of_item_in_list = 4
 
     item_name = case_list[list_navigator * 5 + number_of_item_in_list]
-    level = int(db.get_level(person_id))
-    if item_type == 0:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 2 * math.sqrt(random.random() * 30 + 15))
-        mod_random = random.random() * 100
-        if mod_random < 80:
-            mod_random = "Госстандарт"
-        elif mod_random < 95:
-            mod_random = "Только мечом"
-        else:
-            mod_random = "Мудрость древних ара"
-    elif item_type == 1:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 0.05 * math.sqrt(random.random() * 30 + 15))
-        mod_random = random.random() * 100
-        if mod_random < 80:
-            mod_random = "Пернатая броня"
-        elif mod_random < 95:
-            mod_random = "Без наворотов"
-        else:
-            mod_random = "Ядовитые доспехи"
-    elif item_type == 2:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 0.5 * math.sqrt(random.random() * 30 + 15))
-        mod_random = random.random() * 100
-        if mod_random < 85:
-            mod_random = "Снаряжение новичка"
-        elif mod_random < 95:
-            mod_random = "Критовый попуг"
-        else:
-            mod_random = "Убийца богов"
-    elif item_type == 3:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 0.8 * math.sqrt(random.random() * 30 + 15))
-    switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare)
+
+    if case_type != "skin":
+        level = int(db.get_level(person_id))
+        if item_type == 0:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 2 * math.sqrt(random.random() * 30 + 15))
+            mod_random = random.random() * 100
+            if mod_random < 80:
+                mod_random = "Госстандарт"
+            elif mod_random < 95:
+                mod_random = "Только мечом"
+            else:
+                mod_random = "Мудрость древних ара"
+        elif item_type == 1:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 0.05 * math.sqrt(random.random() * 30 + 15))
+            mod_random = random.random() * 100
+            if mod_random < 80:
+                mod_random = "Пернатая броня"
+            elif mod_random < 95:
+                mod_random = "Без наворотов"
+            else:
+                mod_random = "Ядовитые доспехи"
+        elif item_type == 2:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 0.5 * math.sqrt(random.random() * 30 + 15))
+            mod_random = random.random() * 100
+            if mod_random < 85:
+                mod_random = "Снаряжение новичка"
+            elif mod_random < 95:
+                mod_random = "Критовый попуг"
+            else:
+                mod_random = "Убийца богов"
+        elif item_type == 3:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 0.8 * math.sqrt(random.random() * 30 + 15))
+        switch_item(message, person_id, item_type, item_name, item_stats, item_mod, item_rare)
+    else:
+        switch_case_item(message, person_id. item_name, item_rare)
 
 
 def experience_change(person_id, experience):
@@ -647,12 +684,12 @@ class OpFilter(custom_filters.AdvancedCustomFilter):
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ['accept', 'cancel'])
-def attack_user(call):
+def attack_user(call: CallbackQuery):
     print(my_id, op_id)
     print(call.message.text)
 
     if call.data == "accept":
-
+    #     bot.send_photo(call.message.chat.id,photo=photo)
         my_standard_damage = int(db.get_strength(my_id))
         op_standard_damage = int(db.get_strength(op_id))
         my_first_item_damage = db.get_worn_item_stats(my_id, "item1")
