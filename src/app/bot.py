@@ -323,6 +323,7 @@ def edit_event(message: Message):
 def edit_event(message: Message):
     current_state = str(states[message.from_user.id])
     empty_markup = telebot.types.ReplyKeyboardRemove()
+    #if states[message.from_user.id] != "choose_id" and type_of_event[message.from_user.id] == "regular":
     id_for_edit, table_for_edit = for_edit[message.from_user.id]
 
     match current_state:
@@ -630,8 +631,8 @@ def get_item_from_case(message: Message,  person_id):
             item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                              * 0.8 * math.sqrt(random.random() * 30 + 15))
         switch_item(message, person_id, item_type, item_name, item_stats, item_mod, item_rare)
-    else:
-        switch_case_item(message, person_id. item_name, item_rare)
+   # else:
+        #switch_case_item(message, person_id. item_name, item_rare)
 
 
 def experience_change(person_id, experience):
@@ -1036,10 +1037,11 @@ def run_polling():
     print("Bot has been started...")
     bot.add_custom_filter(OpFilter())
     Thread(target=check_scheduler).start()
-    try:
-        bot.polling(skip_pending=True)
+    while True:
+       # try:
+            bot.polling(skip_pending=True)
 
-    except Exception as err:
-        bot.send_message(771366061, text=f'Время: {datetime.now()}\n'
-                                         f'Тип: {err.__class__}\n'
-                                         f'Ошибка: {err}')
+        ##except Exception as err:
+         #   bot.send_message(771366061, text=f'Время: {datetime.now()}\n'
+           #                              f'Тип: {err.__class__}\n'
+          #                               f'Ошибка: {err}')

@@ -3,5 +3,4 @@ from db import db_maker
 
 if __name__ == "__main__":
         db_maker.init()
-        while True:
-                bot.run_polling()
+        bot.run_polling()
