@@ -1,13 +1,16 @@
 import math
 import os
 import random
-import time as tm
-from threading import Thread
+from datetime import datetime
 
 import schedule
-import telebot
+from threading import Thread
+import time as tm
+
 from PIL import Image
 from PIL import ImageOps
+
+import telebot
 from telebot import custom_filters
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove, CallbackQuery
 
@@ -551,52 +554,65 @@ kb.add(btn_dont_change)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
-def switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare):
-    print()
+def switch_item(message: Message, person_id, item_type, item_name, item_stats, item_mod, item_rare):
+    db_item_name = ""
+    match item_type:
+        case 0:
+            db_item_name = "helmet"
+        case 1:
+            db_item_name = "chestplate"
+        case 2:
+            db_item_name = "item1"
+        case 3:
+            db_item_name = "item2"
+    current_name = ""
+    current_stats = db.get_worn_item_stats(person_id, db_item_name)
+    current_mod = db.get_worn_item_mod(person_id, db_item_name)
+    current_rare = ""
+    bot.send_message(message.chat.id, text="")
 
-skins_case_list = ["Кремниевая репа", "Нейронный купол", "Циркуляционная черепно-мозговая крышка", "Бионическая башня",
-            "Механический торс", "Стальной грудак", "Хромированный бюст", "Титановый каркас", "Кибернетический корпус",
-            "Кибер-нож", "Лазерный кинжал", "Разрядный коготь", "Бионический трезубец", "Химический меч"]
 
 bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри"
-                                                                                                     "Футболка фаната AC/DC",
-                    "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви",
-                    "Эгида солнечного пламени"
+                    "Футболка фаната AC/DC", "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви", "Эгида солнечного пламени"
                     "Гитара", "Палочки для риса", "Длинный меч", "Катана Арасаки", "Грань бесконечности"
-                                                                                   "Водяной пистолет", "Миска рис еда",
-                    "Лук империи Майя", "Пистолет Джонни Сильверхенда", "Убийца кракенов"]
+                    "Водяной пистолет", "Миска рис еда", "Лук империи Майя", "Пистолет Джонни Сильверхенда", "Убийца кракенов"]
 
-silver_case_list = ["Пакет из под чипсов", "Летняя панамка", "Маска Джейсона", "Маска злодея из Скуби-Ду",
-                    "Шапка Мономаха"
-                    "Плащ разведкорпуса", "Черный плащ", "Костюм на Хэллоуин", "Костюм Человека-паука",
-                    "Прикид Майкла Джексона"
-                    "Боксерские перчатки Рокки", "Французский багет", "Резиновая утка",
-                    "Лестница из фильма про Джеки Чана", "Топор викинга"
-                                                         "Йо-йо", "Руки из Хаги ваги", "Хук Пуджа",
-                    "Лассо Индианы Джонса", "Требушет"]
+silver_case_list = ["Пакет из под чипсов", "Летняя панамка", "Маска Джейсона", "Маска злодея из Скуби-Ду", "Шапка Мономаха"
+                    "Плащ разведкорпуса", "Черный плащ", "Костюм на Хэллоуин", "Костюм Человека-паука", "Прикид Майкла Джексона"
+                    "Боксерские перчатки Рокки", "Французский багет", "Резиновая утка", "Лестница из фильма про Джеки Чана", "Топор викинга"
+                    "Йо-йо", "Руки из Хаги ваги", "Хук Пуджа", "Лассо Индианы Джонса", "Требушет"]
 
 golden_case_list = ["Маска Жнеца", "Шапка хиппи", "Противогаз", "Маска Кайла Крейна", "Любимая кепка босса"
-                                                                                      "Костюм космонавта",
-                    "Халат ученого", "Mark 7", "Куртка ночного бегуна", "Косплей"
-                                                                        "Межгалактический звездолет",
-                    "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
-                                                                                     "Пулемет Чака Норриса",
-                    "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
+                    "Костюм космонавта", "Халат ученого", "Mark 7", "Куртка ночного бегуна", "Косплей"
+                    "Межгалактический звездолет", "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
+                    "Пулемет Чака Норриса", "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
 
 skin_case_list = []
+
 
 open_case_list = ["Открыть бронзовый сундук", "Открыть серебряный сундук",
                   "Открыть золотой сундук", "Открыть сундук скинов"]
 
 
-def get_item_from_case(person_id, case_type):
+@bot.message_handler(func=lambda message: message.text in open_case_list)
+def get_item_from_case(message: Message,  person_id):
+    case_type = ""
+    if message == open_case_list[0]:
+        case_type = "bronze"
+    elif message == open_case_list[1]:
+        case_type = "silver"
+    elif message == open_case_list[2]:
+        case_type = "gold"
+    elif message == open_case_list[3]:
+        case_type = "skin"
+
     result = int(random.random() * 100)
     type_result = int(random.random() * 4)
     list_navigator = type_result
     number_of_item_in_list = 0
 
     item_name = ""
-    item_type = ""
+    item_type = type_result
     item_stats = 0
     item_mod = "Пусто"
     item_rare = ""
@@ -633,41 +649,45 @@ def get_item_from_case(person_id, case_type):
         number_of_item_in_list = 4
 
     item_name = case_list[list_navigator * 5 + number_of_item_in_list]
-    level = int(db.get_level(person_id))
-    if item_type == 0:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 2 * math.sqrt(random.random() * 30 + 15))
-        mod_random = random.random() * 100
-        if mod_random < 80:
-            mod_random = "Госстандарт"
-        elif mod_random < 95:
-            mod_random = "Только мечом"
-        else:
-            mod_random = "Мудрость древних ара"
-    elif item_type == 1:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 0.05 * math.sqrt(random.random() * 30 + 15))
-        mod_random = random.random() * 100
-        if mod_random < 80:
-            mod_random = "Пернатая броня"
-        elif mod_random < 95:
-            mod_random = "Без наворотов"
-        else:
-            mod_random = "Ядовитые доспехи"
-    elif item_type == 2:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 0.5 * math.sqrt(random.random() * 30 + 15))
-        mod_random = random.random() * 100
-        if mod_random < 85:
-            mod_random = "Снаряжение новичка"
-        elif mod_random < 95:
-            mod_random = "Критовый попуг"
-        else:
-            mod_random = "Убийца богов"
-    elif item_type == 3:
-        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                         * 0.8 * math.sqrt(random.random() * 30 + 15))
-    switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare)
+
+    if case_type != "skin":
+        level = int(db.get_level(person_id))
+        if item_type == 0:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 2 * math.sqrt(random.random() * 30 + 15))
+            mod_random = random.random() * 100
+            if mod_random < 80:
+                mod_random = "Госстандарт"
+            elif mod_random < 95:
+                mod_random = "Только мечом"
+            else:
+                mod_random = "Мудрость древних ара"
+        elif item_type == 1:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 0.05 * math.sqrt(random.random() * 30 + 15))
+            mod_random = random.random() * 100
+            if mod_random < 80:
+                mod_random = "Пернатая броня"
+            elif mod_random < 95:
+                mod_random = "Без наворотов"
+            else:
+                mod_random = "Ядовитые доспехи"
+        elif item_type == 2:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 0.5 * math.sqrt(random.random() * 30 + 15))
+            mod_random = random.random() * 100
+            if mod_random < 85:
+                mod_random = "Снаряжение новичка"
+            elif mod_random < 95:
+                mod_random = "Критовый попуг"
+            else:
+                mod_random = "Убийца богов"
+        elif item_type == 3:
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                             * 0.8 * math.sqrt(random.random() * 30 + 15))
+        switch_item(message, person_id, item_type, item_name, item_stats, item_mod, item_rare)
+    else:
+        switch_case_item(message, person_id. item_name, item_rare)
 
 
 def experience_change(person_id, experience):
@@ -678,7 +698,7 @@ def experience_change(person_id, experience):
         exp_got -= exp_needed
         lvl_from_table += 1
         exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
-        factor = lvl_from_table ** (1.2 / 3.0)
+        factor = lvl_from_table ** (1.2/3.0)
         current_health = int(factor * db.get_health(person_id))
         current_strength = int(factor * db.get_strength(person_id))
         db.set_lvl(person_id, lvl_from_table)
@@ -725,7 +745,7 @@ def attack_user(call: CallbackQuery):
     print(call.message.text)
 
     if call.data == "accept":
-        #     bot.send_photo(call.message.chat.id,photo=photo)
+    #     bot.send_photo(call.message.chat.id,photo=photo)
         my_standard_damage = int(db.get_strength(my_id))
         op_standard_damage = int(db.get_strength(op_id))
         my_first_item_damage = db.get_worn_item_stats(my_id, "item1")
@@ -971,12 +991,8 @@ def CreateVersusImage(first_pet, second_pet):
     new_image.paste(second_pet, (1232, 0))
     return new_image
 
-'''
-sl_head={3:"Кремниевая репа", 4: "Нейронный купол", 2: "Циркуляционная черепно-мозговая крышка", 1: "Бионическая башня"}
-sl_body={1:"Механический торс", 2:"Стальной грудак", 5: "Хромированный бюст", 3:"Титановый каркас", 4:"Кибернетический корпус"}
-sl_weapon={1:"Кибер-нож", 2:"Лазерный кинжал", 3:"Разрядный коготь", 4:"Бионический трезубец", 5:"Химический меч"}
-'''
-@bot.message_handler(commands=["customize_pet"])
+
+@bot.message_handler(commands=["customizePet"])
 def CustomizePet(message: Message):
     cur_body = db.get_body_skin(message.from_user.id)
     cur_head = db.get_head_skin(message.from_user.id)
