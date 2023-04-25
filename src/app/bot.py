@@ -875,30 +875,29 @@ def attack_user(call):
 
 #CustomizePet
 
-def CreatePetImage(numberOfBody, numberOfHead, numberOfWeapon):
-    '''Пример wayToBody=Body1.png'''
-    wayToBody="app/Images/Body" + numberOfBody + ".png"
-    wayToHead = "app/Images/Head" + numberOfHead + ".png"
-    wayToWeapon = "app/Images/Weapon" + numberOfWeapon + ".png"
-    weaponImage = Image.open(wayToWeapon)
-    bodyImage=Image.open(wayToBody)
-    headImage=Image.open(wayToHead)
-    bodyWithHeadImage=Image.alpha_composite(bodyImage,headImage)
-    petImage=Image.alpha_composite(bodyWithHeadImage,weaponImage)
-    whiteBackgroung=Image.new("RGBA",(768,768),(255,255,255))
-    petImage=Image.alpha_composite(whiteBackgroung,petImage)
-    return petImage
+def CreatePetImage(number_of_body, number_of_head, number_of_weapon):
+    way_to_body="app/Images/Body" + number_of_body + ".png"
+    way_to_head = "app/Images/Head" + number_of_head + ".png"
+    way_to_weapon = "app/Images/Weapon" + number_of_weapon + ".png"
+    weapon_image = Image.open(way_to_weapon)
+    body_image=Image.open(way_to_body)
+    head_image=Image.open(way_to_head)
+    body_with_head_image=Image.alpha_composite(body_image,head_image)
+    pet_image=Image.alpha_composite(body_with_head_image,weapon_image)
+    white_background=Image.new("RGBA",(768,768),(255,255,255))
+    pet_image=Image.alpha_composite(white_background,pet_image)
+    return pet_image
 
-def CreateVersusImage(firstPet,secondPet):
-    versusImage=Image.open("app/Images/Versus.png")
-    whiteBackground=Image.new("RGBA",(464,768),(255,255,255))
-    versusImage=Image.alpha_composite(whiteBackground,versusImage)
-    firstPet=ImageOps.mirror(firstPet)
-    newImage = Image.new("RGBA", (2000, 768),(255,255,255))
-    newImage.paste(firstPet,(0,0))
-    newImage.paste(versusImage,(768,0))
-    newImage.paste(secondPet,(1232,0))
-    return newImage
+def CreateVersusImage(first_pet, second_pet):
+    versus_image=Image.open("app/Images/Versus.png")
+    white_background=Image.new("RGBA",(464,768),(255,255,255))
+    versus_image=Image.alpha_composite(white_background,versus_image)
+    first_pet=ImageOps.mirror(first_pet)
+    new_image = Image.new("RGBA", (2000, 768),(255,255,255))
+    new_image.paste(first_pet, (0, 0))
+    new_image.paste(versus_image,(768,0))
+    new_image.paste(second_pet, (1232, 0))
+    return new_image
 
 @bot.message_handler(commands=["customizePet"])
 def CustomizePet(message: Message):
@@ -906,11 +905,11 @@ def CustomizePet(message: Message):
     cur_head=db.get_head_skin(message.from_user.id)
     cur_weapon=db.get_weapon_skin(message.from_user.id)
 
-    petImage=CreatePetImage(cur_body, cur_head, cur_weapon)
+    pet_image=CreatePetImage(cur_body, cur_head, cur_weapon)
     bot.send_message(message.chat.id, "Ваш текущий персонаж:")
-    bot.send_photo(message.chat.id, petImage)
-    markupToCustomize=MarkupFromList(["Голову","Тело","Оружие","Отмена"])
-    bot.send_message(message.chat.id, "Что вы хотите изменить?",reply_markup=markupToCustomize)
+    bot.send_photo(message.chat.id, pet_image)
+    markup_to_customize=MarkupFromList(["Голову","Тело","Оружие","Отмена"])
+    bot.send_message(message.chat.id, "Что вы хотите изменить?",reply_markup=markup_to_customize)
     states[message.from_user.id] = 'choose_part_to_change'
 
 @bot.message_handler(func=lambda message: message.from_user.id in states and
@@ -933,21 +932,21 @@ def Customizing(message: Message):
         case "choose_part_to_change":
             match message.text:
                 case "Голову":
-                    markupToCustomize = MarkupFromList(available_heads+["Отмена"])
+                    markup_to_customize = MarkupFromList(available_heads+["Отмена"])
                     bot.send_message(message.chat.id, "Текущая: " + cur_head + ". Доступные:",
-                                     reply_markup=markupToCustomize)
+                                     reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_head'
 
                 case "Тело":
-                    markupToCustomize = MarkupFromList(available_bodies+["Отмена"])
+                    markup_to_customize = MarkupFromList(available_bodies+["Отмена"])
                     bot.send_message(message.chat.id, "Текущая: " + cur_body + ". Доступные:",
-                                     reply_markup=markupToCustomize)
+                                     reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_body'
 
                 case "Оружие":
-                    markupToCustomize = MarkupFromList(available_weapons+["Отмена"])
+                    markup_to_customize = MarkupFromList(available_weapons+["Отмена"])
                     bot.send_message(message.chat.id, "Текущее: " + cur_weapon + ". Доступные:",
-                                     reply_markup=markupToCustomize)
+                                     reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_weapon'
 
                 case "Отмена":
@@ -958,9 +957,9 @@ def Customizing(message: Message):
             if cur_head in available_heads:
                 db.set_head_skin(message.from_user.id,cur_head)
                 db.save()
-                petImage = CreatePetImage(cur_body, cur_head, cur_weapon)
+                pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
                 bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
-                bot.send_photo(message.chat.id, petImage)
+                bot.send_photo(message.chat.id, pet_image)
             elif cur_head=="Отмена":
                 bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
             else:
@@ -971,9 +970,9 @@ def Customizing(message: Message):
             if cur_body in available_bodies:
                 db.set_body_skin(message.from_user.id,cur_body)
                 db.save()
-                petImage = CreatePetImage(cur_body, cur_head, cur_weapon)
+                pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
                 bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
-                bot.send_photo(message.chat.id, petImage)
+                bot.send_photo(message.chat.id, pet_image)
             elif cur_body == "Отмена":
                 bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
             else:
@@ -984,9 +983,9 @@ def Customizing(message: Message):
             if cur_weapon in available_weapons:
                 db.set_weapon_skin(message.from_user.id,cur_weapon)
                 db.save()
-                petImage = CreatePetImage(cur_body, cur_head, cur_weapon)
+                pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
                 bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
-                bot.send_photo(message.chat.id, petImage)
+                bot.send_photo(message.chat.id, pet_image)
             elif cur_weapon == "Отмена":
                 bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
             else:
