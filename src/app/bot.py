@@ -93,6 +93,22 @@ def notification_event(message: Message,id:int, table: str,event_data:list):
     #return schedule.CancelJob
 
 
+@bot.message_handler(commands=['help'])
+def helper(message: Message):
+    photo = open('app/Images/popug.jpg','rb')
+    text = 'Привет, я ПопугБот 🦜\n\n' \
+           'Что я могу?\n' \
+           'Ты можешь создавать ивенты - регуляраные и нереулярные. ' \
+           'Регулярные повотряются заданное тобой время и их могут создавть/редактировать только админы. ' \
+           'Нерегулярные выполняются один раз и их может создвавать любой попуг, ты можешь иметь не более одного ивента\n' \
+           'Просто введи /create_event для нерегулярного и /create_regular для регулярного.\n' \
+           'Также есть несколько интересных фич)\n' \
+           'Отправь "ПопугБот, кто [твое утверждение]"\n' \
+           'Или можешь начать подозревать кого нибудь, просто отправь "Подозревать"'
+    bot.send_photo(message.chat.id,photo=photo,caption=text)
+
+
+
 @bot.message_handler(commands=['start'])
 def start_message(message: Message):
     bot.send_message(message.chat.id, 'Привет, я ПопугБот!')
@@ -416,6 +432,36 @@ def get_events(message: Message):
     bot.send_message(message.chat.id, text=text)
 
 
+#ВЫПОЛНЕНИЕ ИВЕНТОВ
+
+
+@bot.message_handler(func=lambda message: message.text == 'my_debug' and not (message.reply_to_message is None))
+def debugger(message: Message):
+    if db.is_admin(message.from_user.id):
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.row_width = 2
+        btn1 = InlineKeyboardButton(text='Реуглярный', callback_data='reg')
+        btn2 = InlineKeyboardButton(text='Нерегулярный', callback_data='irreg')
+        markup.add(btn1, btn2)
+        bot.send_message(message.chat.id, text='Какой ивент выполнил попуг?', reply_markup=markup)
+
+
+# @bot.callback_query_handler(func=lambda call: call.data in ['reg', 'irreg'])
+# def admin_access(call: CallbackQuery):
+#     match call.data:
+#         case 'reg':
+#             list = get_list_of_regular()
+#             if len(list)
+
+
+
+#ВЫПОЛНЕНИЕ ИВЕНТОВ
+
+
+
+#FUN
+
+
 @bot.message_handler(func=lambda message: str(message.text).split()[0] in ['Отмудохать', 'отмудохать'])
 def kick_smb(message: Message):
     photo = open('app/Images/fights/popug' + str(random.randint(1, 3)) + '.jpg', 'rb')
@@ -436,6 +482,9 @@ def who_is(message: Message):
 def suspect(message: Message):
     video = open('app/Images/SuspectPopug.mp4', 'rb')
     bot.send_video(message.chat.id, video=video)
+
+
+#FUN
 
 
 kb = InlineKeyboardMarkup(row_width=1)
@@ -601,20 +650,20 @@ def attack_user(call):
 
         my_standard_damage = int(db.get_strength(my_id))
         op_standard_damage = int(db.get_strength(op_id))
-        my_first_item_damage = db.get_item_stats(my_id, "item1")
-        op_first_item_damage = db.get_item_stats(op_id, "item1")
-        my_second_item_damage = db.get_item_stats(my_id, "item2")
-        op_second_item_damage = db.get_item_stats(op_id, "item2")
-        my_item_ability = db.get_item_mod(my_id, "item1")
-        op_item_ability = db.get_item_mod(op_id, "item1")
-        my_helmet_hp = db.get_item_stats(my_id, "helmet")
-        op_helmet_hp = db.get_item_stats(op_id, "helmet")
-        my_helmet_ability = db.get_item_mod(my_id, "helmet")
-        op_helmet_ability = db.get_item_mod(op_id, "helmet")
-        my_chest_plate_armor = db.get_item_stats(my_id, "chestplate")
-        op_chest_plate_armor = db.get_item_stats(op_id, "chestplate")
-        my_chest_plate_ability = db.get_item_mod(my_id, "chestplate")
-        op_chest_plate_ability = db.get_item_mod(op_id, "chestplate")
+        my_first_item_damage = db.get_worn_item_stats(my_id, "item1")
+        op_first_item_damage = db.get_worn_item_stats(op_id, "item1")
+        my_second_item_damage = db.get_worn_item_stats(my_id, "item2")
+        op_second_item_damage = db.get_worn_item_stats(op_id, "item2")
+        my_item_ability = db.get_worn_item_mod(my_id, "item1")
+        op_item_ability = db.get_worn_item_mod(op_id, "item1")
+        my_helmet_hp = db.get_worn_item_stats(my_id, "helmet")
+        op_helmet_hp = db.get_worn_item_stats(op_id, "helmet")
+        my_helmet_ability = db.get_worn_item_mod(my_id, "helmet")
+        op_helmet_ability = db.get_worn_item_mod(op_id, "helmet")
+        my_chest_plate_armor = db.get_worn_item_stats(my_id, "chestplate")
+        op_chest_plate_armor = db.get_worn_item_stats(op_id, "chestplate")
+        my_chest_plate_ability = db.get_worn_item_mod(my_id, "chestplate")
+        op_chest_plate_ability = db.get_worn_item_mod(op_id, "chestplate")
 
         if my_helmet_ability == "Госстандарт":
             my_hp = int(int(db.get_health(my_id)) * 1.05) + my_helmet_hp
@@ -912,10 +961,10 @@ def run_polling():
     print("Bot has been started...")
     bot.add_custom_filter(OpFilter())
     Thread(target=check_scheduler).start()
-    # try:
-    bot.polling(skip_pending=True)
+    try:
+        bot.polling(skip_pending=True)
 
-    # except Exception as err:
-    #     bot.send_message(771366061, text=f'Время: {datetime.datetime.now()}\n'
-    #                                      f'Тип: {err.__class__}\n'
-    #                                      f'Ошибка: {err}')
+    except Exception as err:
+        bot.send_message(771366061, text=f'Время: {datetime.now()}\n'
+                                         f'Тип: {err.__class__}\n'
+                                         f'Ошибка: {err}')
