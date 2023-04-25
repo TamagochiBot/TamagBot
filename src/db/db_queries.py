@@ -287,14 +287,16 @@ class DataBase:
         """
         self.__conn.commit()
 
-    def create_item(self, id:int, type:str, name:str, stats:int, mod:str) -> None:
+    def create_item(self, id:int, type:str, name:str, rarity:str, stats:int, mod:str) -> int:
         '''
         Inserts item to the 'item' table
+        return id of item
         '''
-        self.__cursor.execute("""INSERT INTO item(user_id,type,name,stats,mod) VALUES (?,?,?,?,?)""",
-                              (id, type, name, stats, mod,))
-        
+        item_id = self.__cursor.execute("""INSERT INTO item(user_id,type,name,rarity,stats,mod) VALUES (?,?,?,?,?,?)""",
+                              (id, type, name, rarity, stats, mod,)).lastrowid
+
         self.save()
+        return int(item_id)
 
     def set_item_type(self, item_id:int, type:str) -> None:
         self.__update_item(item_id,"type", type)
@@ -302,6 +304,9 @@ class DataBase:
     def set_item_name(self, item_id:int, name:str) -> None:
         self.__update_item(item_id,"name", name)
     
+    def set_item_rarity(self, item_id:int, rarity:str) -> None:
+        self.__update_item(item_id, "rarity", rarity)
+
     def set_item_stats(self, item_id:int, stats:int) -> None:
         self.__update_item(item_id,"stats", stats)
     
@@ -315,11 +320,11 @@ class DataBase:
         '''
         try:
             item_id = self.get_item_id(tele_id, type)
-            data = self.__fetchone_item(item_id, type, "mod")
+            data = self.__fetchone_item(item_id, "mod")
             if data is None:
                 return ''
             else:
-                return data[0]
+                return data
         except:
             return ''
         
@@ -330,14 +335,49 @@ class DataBase:
         '''
         try:
             item_id = self.get_item_id(tele_id, type)
-            data = self.__fetchone_item(item_id, type, "stats")
+            data = self.__fetchone_item(item_id, "stats")
             if data is None:
                 return 0
             else:
-                return data[0]
-        except:
+                return data
+        except Exception as e:
+            print(e.args)
             return 0
         
+    def get_worn_item_name(self, tele_id:int, type:str) -> str:
+        '''
+        function takes tele_id and type of item: "helmet", "chestplate", "item1", "item2"
+        returns name of item
+        '''
+        try:
+            item_id = self.get_item_id(tele_id, type)
+            data = str(self.__fetchone_item(item_id, "name"))
+      
+            if data is None:
+                return "none"
+            else:
+                return data
+        except Exception as e:
+            print(e.args)
+            return ""  
+        
+    def get_worn_item_rarity(self, tele_id:int, type:str) -> str:
+        '''
+        function takes tele_id and type of item: "helmet", "chestplate", "item1", "item2"
+        returns name of item
+        '''
+        try:
+            item_id = self.get_item_id(tele_id, type)
+            data = self.__fetchone_item(item_id, "rarity")
+           
+            if data is None:
+                return "none"
+            else:
+                return data
+        except Exception as e:
+            print(e.args)
+            return "none"  
+
     def get_all_items(self, tele_id:int, type:str) -> list():
         '''
         Takes tele_id and returns all items of one type
@@ -354,10 +394,12 @@ class DataBase:
         Gets item_id of worn item
         """
         try:
-            item_id = self.__cursor.execute(
-                f"""SELECT {type} FROM player WHERE id = {tele_id}""").fetchone()[0]
+            item_id = self.__fetchone_player(tele_id, type)
+            if item_id is None:
+                return None
+            else:
+                return item_id
             
-            return None if item_id is None else item_id
         except:
             return None
 

@@ -37,6 +37,7 @@ def init():
             user_id INTEGER NOT NULL,
             type VARCHAR(40) NOT NULL DEFAULT '',
             name VARCHAR(40) NOT NULL DEFAULT '',
+            rarity VARCHAR(40) NOT NULL DEFAULT 'common',
             stats INTEGER NOT NULL DEFAULT 0,
             mod TEXT NOT NULL DEFAULT '',
             FOREIGN KEY(user_id) REFERENCES player(id)
