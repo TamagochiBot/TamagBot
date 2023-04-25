@@ -7,7 +7,6 @@ import schedule
 from threading import Thread
 import time as tm
 
-
 from PIL import Image
 from PIL import ImageOps
 
@@ -27,16 +26,13 @@ bot = telebot.TeleBot(os.environ["TOKEN"])
 
 states = {}
 type_of_event = {}
-state_of_regular = {} 
+state_of_regular = {}
 participants_of_regular = {}
 for_edit = {}
 last_regular_event = db.get_last_regular()
 
 id_for_edit = int()
 table_for_edit = str()
-
-
-
 
 
 # Создание inline кнопок
@@ -52,7 +48,7 @@ def gen_markup() -> telebot.types.InlineKeyboardMarkup:
 def InlineMarkupFromLists(listOfButtons, listOfCalls):
     markup = telebot.types.InlineKeyboardMarkup()
     for i in range(len(listOfCalls)):
-        btn = telebot.types.InlineKeyboardButton(text=listOfButtons[i],callback_data=listOfCalls[i])
+        btn = telebot.types.InlineKeyboardButton(text=listOfButtons[i], callback_data=listOfCalls[i])
         markup.add(btn)
     return markup
 
@@ -66,8 +62,9 @@ def MarkupFromList(listOfButtons):
     return markup
 
 
-def run_threaded(message: Message, id:int, table:str, event_data:list):
-    Thread(target=notification_event,kwargs={"message":message,"id":id,"table":table,"event_data":event_data}).start()
+def run_threaded(message: Message, id: int, table: str, event_data: list):
+    Thread(target=notification_event,
+           kwargs={"message": message, "id": id, "table": table, "event_data": event_data}).start()
     if table == "event":
         return schedule.CancelJob
     elif state_of_regular[id] == "close":
@@ -76,26 +73,26 @@ def run_threaded(message: Message, id:int, table:str, event_data:list):
         return schedule.CancelJob
 
 
-def notification_event(message: Message,id:int, table: str,event_data:list):
+def notification_event(message: Message, id: int, table: str, event_data: list):
     if table == "event":
-        bot.send_message(message.chat.id,text=f'Ваш ивент:\n'
-                                          f'{event_data[0]}\n'
-                                          f'Описание: {event_data[1]}\n'
-                                          f'Опыт: {event_data[2]}\n'
-                                          f'Закончился!')
+        bot.send_message(message.chat.id, text=f'Ваш ивент:\n'
+                                               f'{event_data[0]}\n'
+                                               f'Описание: {event_data[1]}\n'
+                                               f'Опыт: {event_data[2]}\n'
+                                               f'Закончился!')
         db.delete_event(id)
     elif state_of_regular[id] == "run":
-        bot.send_message(message.from_user.id,text=f'Ваш ивент:\n'
-                                          f'{event_data[0]}\n'
-                                          f'Описание: {event_data[1]}\n'
-                                          f'Опыт: {event_data[2]}\n'
-                                          f'Участники: {participants_of_regular[id]}')
-    #return schedule.CancelJob
+        bot.send_message(message.from_user.id, text=f'Ваш ивент:\n'
+                                                    f'{event_data[0]}\n'
+                                                    f'Описание: {event_data[1]}\n'
+                                                    f'Опыт: {event_data[2]}\n'
+                                                    f'Участники: {participants_of_regular[id]}')
+    # return schedule.CancelJob
 
 
 @bot.message_handler(commands=['help'])
 def helper(message: Message):
-    photo = open('app/Images/popug.jpg','rb')
+    photo = open('app/Images/popug.jpg', 'rb')
     text = 'Привет, я ПопугБот 🦜\n\n' \
            'Что я могу?\n' \
            'Ты можешь создавать ивенты - регуляраные и нереулярные. ' \
@@ -105,8 +102,7 @@ def helper(message: Message):
            'Также есть несколько интересных фич)\n' \
            'Отправь "ПопугБот, кто [твое утверждение]"\n' \
            'Или можешь начать подозревать кого нибудь, просто отправь "Подозревать"'
-    bot.send_photo(message.chat.id,photo=photo,caption=text)
-
+    bot.send_photo(message.chat.id, photo=photo, caption=text)
 
 
 @bot.message_handler(commands=['start'])
@@ -196,6 +192,7 @@ def create_regular(message: Message):
     else:
         bot.send_message(message.chat.id, "У вас нет доступа")
 
+
 @bot.message_handler(
     func=lambda message: message.from_user.id in states and states[message.from_user.id] in [
         'event_description',
@@ -227,7 +224,7 @@ def create_event(message: Message):
                 states[message.from_user.id] = 'event_deadline'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
-                #states[message.from_user.id] = 'event_exp' нахера это делать?
+                # states[message.from_user.id] = 'event_exp' нахера это делать?
         case 'event_deadline':
             db.update(table=table, column='deadline', id=id, data=message.text)
             db.save()
@@ -237,7 +234,8 @@ def create_event(message: Message):
             event_data.append(db.get_event_description(id))
             event_data.append(db.get_event_experience(id))
 
-            schedule.every(int(message.text)).seconds.do(run_threaded,table=table, id=id, message=message,event_data=event_data)#.tag(message.from_user.id)
+            schedule.every(int(message.text)).seconds.do(run_threaded, table=table, id=id, message=message,
+                                                         event_data=event_data)  # .tag(message.from_user.id)
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
         case _:
@@ -439,7 +437,7 @@ def get_events(message: Message):
     bot.send_message(message.chat.id, text=text)
 
 
-#ВЫПОЛНЕНИЕ ИВЕНТОВ
+# ВЫПОЛНЕНИЕ ИВЕНТОВ
 
 
 @bot.message_handler(func=lambda message: message.text == 'Выполнить' and not (message.reply_to_message is None))
@@ -461,12 +459,10 @@ def  execute_event(message: Message):
 #             if len(list)
 
 
-
-#ВЫПОЛНЕНИЕ ИВЕНТОВ
-
+# ВЫПОЛНЕНИЕ ИВЕНТОВ
 
 
-#FUN
+# FUN
 
 
 @bot.message_handler(func=lambda message: str(message.text).split()[0] in ['Отмудохать', 'отмудохать'])
@@ -491,7 +487,7 @@ def suspect(message: Message):
     bot.send_video(message.chat.id, video=video)
 
 
-#FUN
+# FUN
 
 
 kb = InlineKeyboardMarkup(row_width=1)
@@ -609,9 +605,12 @@ def experience_change(person_id, experience):
         exp_got -= exp_needed
         lvl_from_table += 1
         exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
-        db.set_lvl(person_id, 1)
-        db.set_health(person_id, )
-        db.set_strength(person_id, )
+        factor = lvl_from_table ** (1.2/3.0)
+        current_health = int(factor * db.get_health(person_id))
+        current_strength = int(factor * db.get_strength(person_id))
+        db.set_lvl(person_id, lvl_from_table)
+        db.set_health(person_id, current_health)
+        db.set_strength(person_id, current_strength)
     db.set_exp(person_id, exp_got)
     db.save()
 
@@ -649,7 +648,6 @@ class OpFilter(custom_filters.AdvancedCustomFilter):
 
 @bot.callback_query_handler(func=lambda call: call.data in ['accept', 'cancel'])
 def attack_user(call):
-
     print(my_id, op_id)
     print(call.message.text)
 
@@ -760,18 +758,18 @@ def attack_user(call):
                     mods_attack_list.append("Критовый попуг")
 
                 bot.send_message(my_id, f'Атакует - {db.get_pet_name(my_id)} \n' +
-                                        f'Моды, использованные в раунде: {mods_attack_list} \n' +
-                                        f'Всего урона с модификаторами: {sum_damage} \n' +
-                                        f'Защищается - {db.get_pet_name(op_id)} \n' +
-                                        f'Моды, использованные в раунде: {mods_defend_list} \n' +
-                                        f'Всего получено урона: {last_hp - op_hp}')
+                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
+                                 f'Всего урона с модификаторами: {sum_damage} \n' +
+                                 f'Защищается - {db.get_pet_name(op_id)} \n' +
+                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
+                                 f'Всего получено урона: {last_hp - op_hp}')
 
                 bot.send_message(op_id, f'Атакует - {db.get_pet_name(my_id)} \n' +
-                                        f'Моды, использованные в раунде: {mods_attack_list} \n' +
-                                        f'Всего урона с модификаторами: {sum_damage} \n' +
-                                        f'Защищается - {db.get_pet_name(op_id)} \n' +
-                                        f'Моды, использованные в раунде: {mods_defend_list} \n' +
-                                        f'Всего получено урона: {last_hp - op_hp}')
+                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
+                                 f'Всего урона с модификаторами: {sum_damage} \n' +
+                                 f'Защищается - {db.get_pet_name(op_id)} \n' +
+                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
+                                 f'Всего получено урона: {last_hp - op_hp}')
                 attacker = "opponent"
 
             else:
@@ -855,62 +853,65 @@ def attack_user(call):
         if my_hp <= 0:
             stolen_cookies = int(random.random() * db.get_balance(my_id) / 5)
             bot.send_message(my_id, f'Победитель - {db.get_pet_name(op_id)} \n'
-                             f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
+                                    f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
             bot.send_message(op_id, f'Победитель - {db.get_pet_name(op_id)} \n'
-                             f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
+                                    f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
         else:
             stolen_cookies = int(random.random() * db.get_balance(op_id) / 5)
             bot.send_message(my_id, f'Победитель - {db.get_pet_name(my_id)} \n'
-                             f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
+                                    f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
             bot.send_message(op_id, f'Победитель - {db.get_pet_name(op_id)} \n'
-                             f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
+                                    f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
 
     elif call.data == "cancel":
         bot.edit_message_text(chat_id=call.message.chat.id,
                               message_id=call.message.message_id, text="Бой отклонен")
 
+
 # БОИ
 
 
-
-#CustomizePet
+# CustomizePet
 
 def CreatePetImage(number_of_body, number_of_head, number_of_weapon):
-    way_to_body="app/Images/Body" + number_of_body + ".png"
+    way_to_body = "app/Images/Body" + number_of_body + ".png"
     way_to_head = "app/Images/Head" + number_of_head + ".png"
     way_to_weapon = "app/Images/Weapon" + number_of_weapon + ".png"
     weapon_image = Image.open(way_to_weapon)
-    body_image=Image.open(way_to_body)
-    head_image=Image.open(way_to_head)
-    body_with_head_image=Image.alpha_composite(body_image,head_image)
-    pet_image=Image.alpha_composite(body_with_head_image,weapon_image)
-    white_background=Image.new("RGBA",(768,768),(255,255,255))
-    pet_image=Image.alpha_composite(white_background,pet_image)
+    body_image = Image.open(way_to_body)
+    head_image = Image.open(way_to_head)
+    body_with_head_image = Image.alpha_composite(body_image, head_image)
+    pet_image = Image.alpha_composite(body_with_head_image, weapon_image)
+    white_background = Image.new("RGBA", (768, 768), (255, 255, 255))
+    pet_image = Image.alpha_composite(white_background, pet_image)
     return pet_image
 
+
 def CreateVersusImage(first_pet, second_pet):
-    versus_image=Image.open("app/Images/Versus.png")
-    white_background=Image.new("RGBA",(464,768),(255,255,255))
-    versus_image=Image.alpha_composite(white_background,versus_image)
-    first_pet=ImageOps.mirror(first_pet)
-    new_image = Image.new("RGBA", (2000, 768),(255,255,255))
+    versus_image = Image.open("app/Images/Versus.png")
+    white_background = Image.new("RGBA", (464, 768), (255, 255, 255))
+    versus_image = Image.alpha_composite(white_background, versus_image)
+    first_pet = ImageOps.mirror(first_pet)
+    new_image = Image.new("RGBA", (2000, 768), (255, 255, 255))
     new_image.paste(first_pet, (0, 0))
-    new_image.paste(versus_image,(768,0))
+    new_image.paste(versus_image, (768, 0))
     new_image.paste(second_pet, (1232, 0))
     return new_image
 
+
 @bot.message_handler(commands=["customizePet"])
 def CustomizePet(message: Message):
-    cur_body=db.get_body_skin(message.from_user.id)
-    cur_head=db.get_head_skin(message.from_user.id)
-    cur_weapon=db.get_weapon_skin(message.from_user.id)
+    cur_body = db.get_body_skin(message.from_user.id)
+    cur_head = db.get_head_skin(message.from_user.id)
+    cur_weapon = db.get_weapon_skin(message.from_user.id)
 
-    pet_image=CreatePetImage(cur_body, cur_head, cur_weapon)
+    pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
     bot.send_message(message.chat.id, "Ваш текущий персонаж:")
     bot.send_photo(message.chat.id, pet_image)
-    markup_to_customize=MarkupFromList(["Голову","Тело","Оружие","Отмена"])
-    bot.send_message(message.chat.id, "Что вы хотите изменить?",reply_markup=markup_to_customize)
+    markup_to_customize = MarkupFromList(["Голову", "Тело", "Оружие", "Отмена"])
+    bot.send_message(message.chat.id, "Что вы хотите изменить?", reply_markup=markup_to_customize)
     states[message.from_user.id] = 'choose_part_to_change'
+
 
 @bot.message_handler(func=lambda message: message.from_user.id in states and
                                           states[message.from_user.id] in [
@@ -920,47 +921,47 @@ def CustomizePet(message: Message):
                                               'change_weapon'
                                           ])
 def Customizing(message: Message):
-    current_state=str(states[message.from_user.id])
+    current_state = str(states[message.from_user.id])
     cur_body = db.get_body_skin(message.from_user.id)
     cur_head = db.get_head_skin(message.from_user.id)
     cur_weapon = db.get_weapon_skin(message.from_user.id)
-    available_heads=db.get_all_head_skins(message.from_user.id)
-    available_bodies=db.get_all_body_skins(message.from_user.id)
-    available_weapons=db.get_all_weapon_skins(message.from_user.id)
+    available_heads = db.get_all_head_skins(message.from_user.id)
+    available_bodies = db.get_all_body_skins(message.from_user.id)
+    available_weapons = db.get_all_weapon_skins(message.from_user.id)
 
     match current_state:
         case "choose_part_to_change":
             match message.text:
                 case "Голову":
-                    markup_to_customize = MarkupFromList(available_heads+["Отмена"])
+                    markup_to_customize = MarkupFromList(available_heads + ["Отмена"])
                     bot.send_message(message.chat.id, "Текущая: " + cur_head + ". Доступные:",
                                      reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_head'
 
                 case "Тело":
-                    markup_to_customize = MarkupFromList(available_bodies+["Отмена"])
+                    markup_to_customize = MarkupFromList(available_bodies + ["Отмена"])
                     bot.send_message(message.chat.id, "Текущая: " + cur_body + ". Доступные:",
                                      reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_body'
 
                 case "Оружие":
-                    markup_to_customize = MarkupFromList(available_weapons+["Отмена"])
+                    markup_to_customize = MarkupFromList(available_weapons + ["Отмена"])
                     bot.send_message(message.chat.id, "Текущее: " + cur_weapon + ". Доступные:",
                                      reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_weapon'
 
                 case "Отмена":
-                    bot.send_message(message.chat.id,"Хорошо, изменения отменены",reply_markup=ReplyKeyboardRemove())
+                    bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
 
         case 'change_head':
             cur_head = message.text
             if cur_head in available_heads:
-                db.set_head_skin(message.from_user.id,cur_head)
+                db.set_head_skin(message.from_user.id, cur_head)
                 db.save()
                 pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
                 bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
                 bot.send_photo(message.chat.id, pet_image)
-            elif cur_head=="Отмена":
+            elif cur_head == "Отмена":
                 bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
             else:
                 bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
@@ -968,7 +969,7 @@ def Customizing(message: Message):
         case 'change_body':
             cur_body = message.text
             if cur_body in available_bodies:
-                db.set_body_skin(message.from_user.id,cur_body)
+                db.set_body_skin(message.from_user.id, cur_body)
                 db.save()
                 pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
                 bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
@@ -981,7 +982,7 @@ def Customizing(message: Message):
         case 'change_weapon':
             cur_weapon = message.text
             if cur_weapon in available_weapons:
-                db.set_weapon_skin(message.from_user.id,cur_weapon)
+                db.set_weapon_skin(message.from_user.id, cur_weapon)
                 db.save()
                 pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
                 bot.send_message(message.chat.id, "Ваш новый персонаж:", reply_markup=ReplyKeyboardRemove())
@@ -992,7 +993,7 @@ def Customizing(message: Message):
                 bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
 
 
-#CustomizePet
+# CustomizePet
 
 def run_polling():
     print("Bot has been started...")
