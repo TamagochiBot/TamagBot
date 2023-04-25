@@ -129,6 +129,11 @@ def registration(message: Message):
     db.set_head_skin(message.from_user.id, random_head)
     db.set_weapon_skin(message.from_user.id, "0")
     db.save()
+    pet_image = CreatePetImage(random_body, random_head, "0")
+    bot.send_photo(message.chat.id, pet_image, caption= "Это ваш новый персонаж!\n"
+                                                        "В дальнейшем вы сможете"
+                                                             "изменить внешний вид своего"
+                                                             "персонажа с помощью команды /customize_pet", reply_markup=ReplyKeyboardRemove())
     del states[message.from_user.id]
 
 
@@ -1024,6 +1029,12 @@ sl_head={3:"Кремниевая репа", 4: "Нейронный купол", 
 sl_body={1:"Механический торс", 2:"Стальной грудак", 5: "Хромированный бюст", 3:"Титановый каркас", 4:"Кибернетический корпус"}
 sl_weapon={1:"Кибер-нож", 2:"Лазерный кинжал", 3:"Разрядный коготь", 4:"Бионический трезубец", 5:"Химический меч"}
 '''
+
+def InlineMarkupFromList(l):
+    inline_markup = InlineKeyboardMarkup()
+    for each in l:
+        inline_markup.add(InlineKeyboardButton(text=each, switch_inline_query_current_chat=each))
+    return inline_markup
 @bot.message_handler(commands=["customize_pet"])
 def CustomizePet(message: Message):
     cur_body = db.get_body_skin(message.from_user.id)
@@ -1033,7 +1044,7 @@ def CustomizePet(message: Message):
     pet_image = CreatePetImage(cur_body, cur_head, cur_weapon)
     bot.send_message(message.chat.id, "Ваш текущий персонаж:")
     bot.send_photo(message.chat.id, pet_image)
-    markup_to_customize = MarkupFromList(["Голову", "Тело", "Оружие", "Отмена"])
+    markup_to_customize = InlineMarkupFromList(["Голову", "Тело", "Оружие", "Отмена"])
     bot.send_message(message.chat.id, "Что вы хотите изменить?", reply_markup=markup_to_customize)
     states[message.from_user.id] = 'choose_part_to_change'
 
@@ -1056,21 +1067,21 @@ def Customizing(message: Message):
 
     match current_state:
         case "choose_part_to_change":
-            match message.text:
+            match message.text.split()[1]:
                 case "Голову":
-                    markup_to_customize = MarkupFromList(available_heads + ["Отмена"])
+                    markup_to_customize = InlineMarkupFromList(available_heads + ["Отмена"])
                     bot.send_message(message.chat.id, "Текущая: " + cur_head + ". Доступные:",
                                      reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_head'
 
                 case "Тело":
-                    markup_to_customize = MarkupFromList(available_bodies + ["Отмена"])
+                    markup_to_customize = InlineMarkupFromList(available_bodies + ["Отмена"])
                     bot.send_message(message.chat.id, "Текущая: " + cur_body + ". Доступные:",
                                      reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_body'
 
                 case "Оружие":
-                    markup_to_customize = MarkupFromList(available_weapons + ["Отмена"])
+                    markup_to_customize = InlineMarkupFromList(available_weapons + ["Отмена"])
                     bot.send_message(message.chat.id, "Текущее: " + cur_weapon + ". Доступные:",
                                      reply_markup=markup_to_customize)
                     states[message.from_user.id] = 'change_weapon'
@@ -1079,7 +1090,7 @@ def Customizing(message: Message):
                     bot.send_message(message.chat.id, "Хорошо, изменения отменены", reply_markup=ReplyKeyboardRemove())
 
         case 'change_head':
-            cur_head = message.text
+            cur_head = message.text.split()[1]
             if cur_head in available_heads:
                 db.set_head_skin(message.from_user.id, cur_head)
                 db.save()
@@ -1092,7 +1103,7 @@ def Customizing(message: Message):
                 bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
 
         case 'change_body':
-            cur_body = message.text
+            cur_body = message.text.split()[1]
             if cur_body in available_bodies:
                 db.set_body_skin(message.from_user.id, cur_body)
                 db.save()
@@ -1105,7 +1116,7 @@ def Customizing(message: Message):
                 bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
 
         case 'change_weapon':
-            cur_weapon = message.text
+            cur_weapon = message.text.split()[1]
             if cur_weapon in available_weapons:
                 db.set_weapon_skin(message.from_user.id, cur_weapon)
                 db.save()
