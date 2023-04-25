@@ -120,11 +120,13 @@ def start_message(message: Message):
 def registration(message: Message):
     db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.username)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
-    db.add_body_skin(message.from_user.id, "1")
-    db.add_head_skin(message.from_user.id, "1")
+    random_body=str(random.randint(1,5))
+    random_head=str(random.randint(1,4))
+    db.add_body_skin(message.from_user.id, random_body)
+    db.add_head_skin(message.from_user.id, random_head)
     db.add_weapon_skin(message.from_user.id, "0")
-    db.set_body_skin(message.from_user.id, "1")
-    db.set_head_skin(message.from_user.id, "1")
+    db.set_body_skin(message.from_user.id, random_body)
+    db.set_head_skin(message.from_user.id, random_head)
     db.set_weapon_skin(message.from_user.id, "0")
     db.save()
     del states[message.from_user.id]
@@ -555,6 +557,9 @@ kb.add(btn_dont_change)
 def switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare):
     print()
 
+skins_case_list = ["Кремниевая репа", "Нейронный купол", "Циркуляционная черепно-мозговая крышка", "Бионическая башня",
+            "Механический торс", "Стальной грудак", "Хромированный бюст", "Титановый каркас", "Кибернетический корпус",
+            "Кибер-нож", "Лазерный кинжал", "Разрядный коготь", "Бионический трезубец", "Химический меч"]
 
 bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри"
                                                                                                      "Футболка фаната AC/DC",
@@ -969,8 +974,12 @@ def CreateVersusImage(first_pet, second_pet):
     new_image.paste(second_pet, (1232, 0))
     return new_image
 
-
-@bot.message_handler(commands=["customizePet"])
+'''
+sl_head={3:"Кремниевая репа", 4: "Нейронный купол", 2: "Циркуляционная черепно-мозговая крышка", 1: "Бионическая башня"}
+sl_body={1:"Механический торс", 2:"Стальной грудак", 5: "Хромированный бюст", 3:"Титановый каркас", 4:"Кибернетический корпус"}
+sl_weapon={1:"Кибер-нож", 2:"Лазерный кинжал", 3:"Разрядный коготь", 4:"Бионический трезубец", 5:"Химический меч"}
+'''
+@bot.message_handler(commands=["customize_pet"])
 def CustomizePet(message: Message):
     cur_body = db.get_body_skin(message.from_user.id)
     cur_head = db.get_head_skin(message.from_user.id)
