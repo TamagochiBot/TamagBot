@@ -1,12 +1,13 @@
 import sqlite3 as sql
 
+
 def init():
     connect = sql.connect("testDB.db")
 
     # database cursor is a mechanism that enables traversal over the records in a database.
     cursor = connect.cursor()
 
-    #PLAYER TABLE
+    # PLAYER TABLE
     cursor.execute('''CREATE TABLE IF NOT EXISTS player (
             id INTEGER PRIMARY KEY,
             is_admin BOOLEAN NOT NULL DEFAULT 0,
@@ -31,7 +32,7 @@ def init():
             );
     ''')
 
-     # ITEMS TABLE
+    # ITEMS TABLE
     cursor.execute('''CREATE TABLE IF NOT EXISTS item (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -56,9 +57,9 @@ def init():
             FOREIGN KEY(user_id) REFERENCES player(id)
             ON DELETE SET NULL ON UPDATE CASCADE
             );
-    """ )
+    """)
 
-     # REGULAR EVENT TABLE 
+    # REGULAR EVENT TABLE
     cursor.execute("""CREATE TABLE IF NOT EXISTS regular_event (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             event_name VARCHAR(40) NOT NULL DEFAULT '',
@@ -70,7 +71,8 @@ def init():
             FOREIGN KEY(user_id) REFERENCES player(id)
             ON DELETE SET NULL ON UPDATE CASCADE
             );
-    """ )
+    """)
+
 
 if __name__ == "__main__":
     init()
