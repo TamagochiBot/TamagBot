@@ -164,7 +164,7 @@ class DataBase:
             return 0
 
     def get_event_name(self, tele_id:int) -> str:
-        return self.__fetchone_event(tele_id, "name")
+        return self.__fetchone_event(tele_id, "event_name")
     
     def get_event_description(self, tele_id:int) -> str:
         return self.__fetchone_event(tele_id, "description")

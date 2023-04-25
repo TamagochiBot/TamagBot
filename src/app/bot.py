@@ -1,16 +1,13 @@
 import math
 import os
 import random
-from datetime import datetime
+import time as tm
+from threading import Thread
 
 import schedule
-from threading import Thread
-import time as tm
-
+import telebot
 from PIL import Image
 from PIL import ImageOps
-
-import telebot
 from telebot import custom_filters
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove, CallbackQuery
 
@@ -100,7 +97,7 @@ def helper(message: Message):
            'Нерегулярные выполняются один раз и их может создвавать любой попуг, ты можешь иметь не более одного ивента\n' \
            'Просто введи /create_event для нерегулярного и /create_regular для регулярного.\n' \
            'Также есть несколько интересных фич)\n' \
-           'Отправь "ПопугБот, кто [твое утверждение]"\n' \
+           'Отправь "ПопугБот кто [твое утверждение]"\n' \
            'Или можешь начать подозревать кого нибудь, просто отправь "Подозревать"'
     bot.send_photo(message.chat.id, photo=photo, caption=text)
 
@@ -415,7 +412,7 @@ def get_list_of_regular():
     text = str()
     lst_of_events = db.fetchall("regular_event")
     for event in lst_of_events:
-        text += f'''ID:{event[0]}, Ивент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
+        text += f'''ID:{event[0]}\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
     return text
 
 
@@ -439,24 +436,81 @@ def get_events(message: Message):
 
 # ВЫПОЛНЕНИЕ ИВЕНТОВ
 
+execute = {}
+
 
 @bot.message_handler(func=lambda message: message.text == 'Выполнить' and not (message.reply_to_message is None))
-def  execute_event(message: Message):
+def execute_event(message: Message):
+    execute[message.from_user.id] = message.reply_to_message.from_user.id
     if db.is_admin(message.from_user.id):
         markup = telebot.types.InlineKeyboardMarkup()
         markup.row_width = 2
-        btn1 = InlineKeyboardButton(text='Реуглярный', callback_data='reg')
+        btn1 = InlineKeyboardButton(text='Регулярный', callback_data='reg')
         btn2 = InlineKeyboardButton(text='Нерегулярный', callback_data='irreg')
         markup.add(btn1, btn2)
         bot.send_message(message.chat.id, text='Какой ивент выполнил попуг?', reply_markup=markup)
+        execute[message.from_user.id] = message.reply_to_message.from_user.id
+        states[message.from_user.id] = 'type_choose'
+    else:
+        if db.exists(table='event', id=message.from_user.id, column='user_id'):
+            experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
+            bot.send_message(message.chat.id,
+                             f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
+        else:
+            bot.send_message(message.chat.id, 'Нет такого ивента')
 
 
-# @bot.callback_query_handler(func=lambda call: call.data in ['reg', 'irreg'])
-# def admin_access(call: CallbackQuery):
-#     match call.data:
-#         case 'reg':
-#             list = get_list_of_regular()
-#             if len(list)
+@bot.message_handler(commands=['info'])
+def info(message: Message):
+    if message.from_user.id in states:
+        txt = f'{message.from_user.id}\n' \
+              f'{states[message.from_user.id]}'
+        bot.send_message(message.chat.id, txt)
+    else:
+        bot.send_message(message.chat.id, 'akjbrvnajv')
+
+ 
+@bot.callback_query_handler(
+    func=lambda call: call.data in ['reg', 'irreg'] and call.from_user.id in states and states[
+        call.from_user.id] in ['type_choose'])
+def admin_access(call: CallbackQuery):
+    match call.data:
+        case 'reg':
+            list_of_events = get_list_of_regular()
+            if last_regular_event != 0:
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.id,
+                                      text='Ивенты:\n' + list_of_events)
+                bot.send_message(call.message.chat.id, 'Напишите ID ивента')
+                states[call.from_user.id] = 'id_choose'
+            else:
+                bot.send_message(call.message.chat.id, 'Нет регулярных ивентов')
+                del states[call.from_user.id]
+        case 'irreg':
+            if db.exists(table='event', id=call.from_user.id, column='user_id'):
+                experience_change(execute[call.from_user.id],
+                                  db.get_event_experience(call.from_user.id))
+                bot.send_message(call.message.chat.id,
+                                 f'Попуг {db.get_user_name(execute[call.from_user.id])} получил {db.get_event_experience(call.from_user.id)} опыта')
+            else:
+                bot.send_message(call.message.chat.id, 'Нет такого ивента')
+
+
+@bot.message_handler(
+    func=lambda message: message.from_user.id in states and states[message.from_user.id] in ['id_choose'])
+def choose_event(message: Message):
+    try:
+        for_execute = int(message.text)
+        if not db.exists(table="regular_event", id=for_execute):
+            raise "doesn't exist"
+        else:
+            if db.exists(table='event', id=message.from_user.id, column='user_id'):
+                experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
+                bot.send_message(message.chat.id,
+                                 f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
+            else:
+                bot.send_message(message.chat.id, 'Нет такого ивента')
+    except:
+        bot.send_message(message.chat.id, "Не подходящий айди. Попробуй еще раз")
 
 
 # ВЫПОЛНЕНИЕ ИВЕНТОВ
@@ -498,65 +552,49 @@ kb.add(btn_dont_change)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
-def switch_item(message: Message, person_id, item_type, item_name, item_stats, item_mod, item_rare):
-    db_item_name = ""
-    match item_type:
-        case 0:
-            db_item_name = "helmet"
-        case 1:
-            db_item_name = "chestplate"
-        case 2:
-            db_item_name = "item1"
-        case 3:
-            db_item_name = "item2"
-    current_name = ""
-    current_stats = db.get_worn_item_stats(person_id, db_item_name)
-    current_mod = db.get_worn_item_mod(person_id, db_item_name)
-    current_rare = ""
-    bot.send_message(message.chat.id, text="")
+def switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare):
+    print()
 
 
 bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри"
-                    "Футболка фаната AC/DC", "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви", "Эгида солнечного пламени"
+                                                                                                     "Футболка фаната AC/DC",
+                    "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви",
+                    "Эгида солнечного пламени"
                     "Гитара", "Палочки для риса", "Длинный меч", "Катана Арасаки", "Грань бесконечности"
-                    "Водяной пистолет", "Миска рис еда", "Лук империи Майя", "Пистолет Джонни Сильверхенда", "Убийца кракенов"]
+                                                                                   "Водяной пистолет", "Миска рис еда",
+                    "Лук империи Майя", "Пистолет Джонни Сильверхенда", "Убийца кракенов"]
 
-silver_case_list = ["Пакет из под чипсов", "Летняя панамка", "Маска Джейсона", "Маска злодея из Скуби-Ду", "Шапка Мономаха"
-                    "Плащ разведкорпуса", "Черный плащ", "Костюм на Хэллоуин", "Костюм Человека-паука", "Прикид Майкла Джексона"
-                    "Боксерские перчатки Рокки", "Французский багет", "Резиновая утка", "Лестница из фильма про Джеки Чана", "Топор викинга"
-                    "Йо-йо", "Руки из Хаги ваги", "Хук Пуджа", "Лассо Индианы Джонса", "Требушет"]
+silver_case_list = ["Пакет из под чипсов", "Летняя панамка", "Маска Джейсона", "Маска злодея из Скуби-Ду",
+                    "Шапка Мономаха"
+                    "Плащ разведкорпуса", "Черный плащ", "Костюм на Хэллоуин", "Костюм Человека-паука",
+                    "Прикид Майкла Джексона"
+                    "Боксерские перчатки Рокки", "Французский багет", "Резиновая утка",
+                    "Лестница из фильма про Джеки Чана", "Топор викинга"
+                                                         "Йо-йо", "Руки из Хаги ваги", "Хук Пуджа",
+                    "Лассо Индианы Джонса", "Требушет"]
 
 golden_case_list = ["Маска Жнеца", "Шапка хиппи", "Противогаз", "Маска Кайла Крейна", "Любимая кепка босса"
-                    "Костюм космонавта", "Халат ученого", "Mark 7", "Куртка ночного бегуна", "Косплей"
-                    "Межгалактический звездолет", "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
-                    "Пулемет Чака Норриса", "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
+                                                                                      "Костюм космонавта",
+                    "Халат ученого", "Mark 7", "Куртка ночного бегуна", "Косплей"
+                                                                        "Межгалактический звездолет",
+                    "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
+                                                                                     "Пулемет Чака Норриса",
+                    "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
 
 skin_case_list = []
-
 
 open_case_list = ["Открыть бронзовый сундук", "Открыть серебряный сундук",
                   "Открыть золотой сундук", "Открыть сундук скинов"]
 
 
-@bot.message_handler(func=lambda message: message.text in open_case_list)
-def get_item_from_case(message: Message,  person_id):
-    case_type = ""
-    if message == open_case_list[0]:
-        case_type = "bronze"
-    elif message == open_case_list[1]:
-        case_type = "silver"
-    elif message == open_case_list[2]:
-        case_type = "gold"
-    elif message == open_case_list[3]:
-        case_type = "skin"
-
+def get_item_from_case(person_id, case_type):
     result = int(random.random() * 100)
     type_result = int(random.random() * 4)
     list_navigator = type_result
     number_of_item_in_list = 0
 
     item_name = ""
-    item_type = type_result
+    item_type = ""
     item_stats = 0
     item_mod = "Пусто"
     item_rare = ""
@@ -593,45 +631,41 @@ def get_item_from_case(message: Message,  person_id):
         number_of_item_in_list = 4
 
     item_name = case_list[list_navigator * 5 + number_of_item_in_list]
-
-    if case_type != "skin":
-        level = int(db.get_level(person_id))
-        if item_type == 0:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                             * 2 * math.sqrt(random.random() * 30 + 15))
-            mod_random = random.random() * 100
-            if mod_random < 80:
-                mod_random = "Госстандарт"
-            elif mod_random < 95:
-                mod_random = "Только мечом"
-            else:
-                mod_random = "Мудрость древних ара"
-        elif item_type == 1:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                             * 0.05 * math.sqrt(random.random() * 30 + 15))
-            mod_random = random.random() * 100
-            if mod_random < 80:
-                mod_random = "Пернатая броня"
-            elif mod_random < 95:
-                mod_random = "Без наворотов"
-            else:
-                mod_random = "Ядовитые доспехи"
-        elif item_type == 2:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                             * 0.5 * math.sqrt(random.random() * 30 + 15))
-            mod_random = random.random() * 100
-            if mod_random < 85:
-                mod_random = "Снаряжение новичка"
-            elif mod_random < 95:
-                mod_random = "Критовый попуг"
-            else:
-                mod_random = "Убийца богов"
-        elif item_type == 3:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
-                             * 0.8 * math.sqrt(random.random() * 30 + 15))
-        switch_item(message, person_id, item_type, item_name, item_stats, item_mod, item_rare)
-    else:
-        switch_case_item(message, person_id. item_name, item_rare)
+    level = int(db.get_level(person_id))
+    if item_type == 0:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 2 * math.sqrt(random.random() * 30 + 15))
+        mod_random = random.random() * 100
+        if mod_random < 80:
+            mod_random = "Госстандарт"
+        elif mod_random < 95:
+            mod_random = "Только мечом"
+        else:
+            mod_random = "Мудрость древних ара"
+    elif item_type == 1:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 0.05 * math.sqrt(random.random() * 30 + 15))
+        mod_random = random.random() * 100
+        if mod_random < 80:
+            mod_random = "Пернатая броня"
+        elif mod_random < 95:
+            mod_random = "Без наворотов"
+        else:
+            mod_random = "Ядовитые доспехи"
+    elif item_type == 2:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 0.5 * math.sqrt(random.random() * 30 + 15))
+        mod_random = random.random() * 100
+        if mod_random < 85:
+            mod_random = "Снаряжение новичка"
+        elif mod_random < 95:
+            mod_random = "Критовый попуг"
+        else:
+            mod_random = "Убийца богов"
+    elif item_type == 3:
+        item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+                         * 0.8 * math.sqrt(random.random() * 30 + 15))
+    switch_item(person_id, item_type, item_name, item_stats, item_mod, item_rare)
 
 
 def experience_change(person_id, experience):
@@ -642,7 +676,7 @@ def experience_change(person_id, experience):
         exp_got -= exp_needed
         lvl_from_table += 1
         exp_needed = int(math.sqrt(lvl_from_table * 60) * 30)
-        factor = lvl_from_table ** (1.2/3.0)
+        factor = lvl_from_table ** (1.2 / 3.0)
         current_health = int(factor * db.get_health(person_id))
         current_strength = int(factor * db.get_strength(person_id))
         db.set_lvl(person_id, lvl_from_table)
@@ -689,7 +723,7 @@ def attack_user(call: CallbackQuery):
     print(call.message.text)
 
     if call.data == "accept":
-    #     bot.send_photo(call.message.chat.id,photo=photo)
+        #     bot.send_photo(call.message.chat.id,photo=photo)
         my_standard_damage = int(db.get_strength(my_id))
         op_standard_damage = int(db.get_strength(op_id))
         my_first_item_damage = db.get_worn_item_stats(my_id, "item1")
@@ -1036,10 +1070,10 @@ def run_polling():
     print("Bot has been started...")
     bot.add_custom_filter(OpFilter())
     Thread(target=check_scheduler).start()
-    try:
-        bot.polling(skip_pending=True)
+    # try:
+    bot.polling(skip_pending=True)
 
-    except Exception as err:
-        bot.send_message(771366061, text=f'Время: {datetime.now()}\n'
-                                         f'Тип: {err.__class__}\n'
-                                         f'Ошибка: {err}')
+    # except Exception as err:
+    #     bot.send_message(771366061, text=f'Время: {datetime.now()}\n'
+    #                                      f'Тип: {err.__class__}\n'
+    #                                      f'Ошибка: {err}')
