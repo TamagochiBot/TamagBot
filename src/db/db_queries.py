@@ -25,6 +25,18 @@ class DataBase:
                               (id, is_admin, user_name, pet_name,))
 
         self.save()
+    
+    def add_head_skin(self, id:int, skin:str):
+        all_heads = "".join(i+";" for i in self.get_all_head_skins(id)) + skin + ";"
+        self.__update_player(id,"available_head_skins", all_heads)
+
+    def add_body_skin(self, id:int, skin:str):
+        all_bodies = "".join(i+";" for i in self.get_all_body_skins(id)) + skin + ";"
+        self.__update_player(id,"available_body_skins", all_bodies)
+
+    def add_weapon_skin(self, id:int, skin:str):
+        all_weapons = "".join(i+";" for i in self.get_all_weapon_skins(id)) + skin + ";"
+        self.__update_player(id,"available_weapon_skins", all_weapons)
 
     def set_exp(self, id:int, exp:int) -> None:
         self.__update_player(id, "experience", exp)
@@ -55,6 +67,15 @@ class DataBase:
     
     def set_weapon_skin(self, id:int, skin:str) -> None:
         self.__update_player(id, "weapon_skin", skin)
+
+    def get_all_head_skins(self,id:int) -> list:
+        return list(string for string in self.__fetchone_player(id, "available_head_skins").split(";") if string != '')
+    
+    def get_all_body_skins(self,id:int) -> list:
+        return list(string for string in self.__fetchone_player(id, "available_body_skins").split(";") if string != '')
+    
+    def get_all_weapon_skins(self,id:int) -> list:
+        return list(string for string in self.__fetchone_player(id, "available_weapon_skins").split(";") if string != '')
 
     def get_player_id(self,user_name:str) -> int:
         '''

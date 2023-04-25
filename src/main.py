@@ -1,7 +1,3 @@
-import time
-
-import schedule
-
 from app import bot
 from db import db_maker
 

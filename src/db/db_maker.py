@@ -23,6 +23,9 @@ def init():
             strength INTEGER NOT NULL DEFAULT 0,
             weapon_damage INTEGER NOT NULL DEFAULT 0,
             head_skin TEXT NOT NULL DEFAULT 'default',
+            available_head_skins NOT NULL DEFAULT '',
+            available_body_skins NOT NULL DEFAULT '',
+            available_weapon_skins NOT NULL DEFAULT '',
             body_skin TEXT NOT NULL DEFAULT 'default',
             weapon_skin TEXT NOT NULL DEFAULT 'default'
             );
