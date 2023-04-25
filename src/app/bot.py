@@ -456,18 +456,10 @@ def execute_event(message: Message):
             experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
             bot.send_message(message.chat.id,
                              f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
+            del execute[message.from_user.id]
         else:
             bot.send_message(message.chat.id, 'Нет такого ивента')
 
-
-@bot.message_handler(commands=['info'])
-def info(message: Message):
-    if message.from_user.id in states:
-        txt = f'{message.from_user.id}\n' \
-              f'{states[message.from_user.id]}'
-        bot.send_message(message.chat.id, txt)
-    else:
-        bot.send_message(message.chat.id, 'akjbrvnajv')
 
  
 @bot.callback_query_handler(
@@ -491,6 +483,7 @@ def admin_access(call: CallbackQuery):
                                   db.get_event_experience(call.from_user.id))
                 bot.send_message(call.message.chat.id,
                                  f'Попуг {db.get_user_name(execute[call.from_user.id])} получил {db.get_event_experience(call.from_user.id)} опыта')
+                del execute[call.from_user.id]
             else:
                 bot.send_message(call.message.chat.id, 'Нет такого ивента')
 
@@ -503,10 +496,14 @@ def choose_event(message: Message):
         if not db.exists(table="regular_event", id=for_execute):
             raise "doesn't exist"
         else:
-            if db.exists(table='event', id=message.from_user.id, column='user_id'):
-                experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
-                bot.send_message(message.chat.id,
-                                 f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
+            if db.exists(table='regular_event', id=for_execute):
+                # experience_change(execute[message.from_user.id], db.get_regular_experience(for_execute))
+                # bot.send_message(message.chat.id,
+                #                  f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
+                db.add_regular_player(for_execute, execute[message.from_user.id])
+                bot.send_message(message.chat.id, 'Попуг добавлен в список выполения')
+                del execute[message.from_user.id]
+
             else:
                 bot.send_message(message.chat.id, 'Нет такого ивента')
     except:
