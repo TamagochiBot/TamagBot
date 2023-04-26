@@ -56,10 +56,10 @@ def MarkupFromList(listOfButtons):
     return markup
 
 
-def run_threaded(message: Message, id: int, table: str):    
+def run_threaded(message: Message, id: int, table: str):
     Thread(target=notification_event,
            kwargs={"message": message, "id": id, "table": table}).start()
-    
+
     if table == "event":
         return schedule.CancelJob
     elif state_of_regular[id] == "close":
@@ -222,28 +222,59 @@ def create_event(message: Message):
             states[message.from_user.id] = 'event_exp'
         case 'event_exp':
             if str.isdigit(message.text):
+                mrk = InlineKeyboardMarkup()
+                mrk.add(InlineKeyboardButton(text='Минуты',callback_data='минутах'))
+                mrk.add(InlineKeyboardButton(text='Часы', callback_data='часах'))
+                mrk.add(InlineKeyboardButton(text='Дни', callback_data='днях'))
+                mrk.add(InlineKeyboardButton(text='Недели', callback_data='неделях'))
                 db.update(table=table, column='experience', id=id, data=int(message.text))
-                bot.send_message(message.chat.id, 'Укажите дедлайн в секундах')
-                states[message.from_user.id] = 'event_deadline'
+                bot.send_message(message.chat.id, 'Дедлайн будет...', reply_markup=mrk)
+                states[message.from_user.id] = 'event_deadline_interval'
             else:
                 bot.send_message(message.chat.id, 'Введите число')
                 # states[message.from_user.id] = 'event_exp' нахера это делать?
         case 'event_deadline':
             db.update(table=table, column='deadline', id=id, data=message.text)
             db.save()
-            
-            global event_data
 
+            global event_data
             if table != "event":
                 event_data[id] = (db.get_regular_name(id), db.get_regular_description(id), db.get_regular_experience(id))
             else:
                 event_data[id] = (db.get_event_name(id), db.get_event_description(id), db.get_event_experience(id))
 
-            schedule.every(int(message.text)).seconds.do(run_threaded, table=table, id=id, message=message).tag(id)
+            match event_interval[message.from_user.id]:
+                case 'минутах':
+                    schedule.every(int(message.text)).minutes.do(run_threaded, table=table, id=id, message=message).tag(id)
+                case 'часах':
+                    schedule.every(int(message.text)).hours.do(run_threaded, table=table, id=id, message=message).tag(id)
+                case 'днях':
+                    schedule.every(int(message.text)).days.do(run_threaded, table=table, id=id, message=message).tag(id)
+                case 'неделях':
+                    schedule.every(int(message.text)).weeks.do(run_threaded, table=table, id=id, message=message).tag(id)
+
+
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
+            del event_interval[message.from_user.id]
         case _:
             bot.send_message(message.chat.id, 'LOL')
+
+
+event_interval = {}
+
+
+@bot.callback_query_handler(
+    func=lambda call: call.from_user.id in states and states[call.from_user.id] == 'event_deadline_interval')
+def deadline_interval(call: CallbackQuery):
+    bot.edit_message_text(f'Введите дедлайн в {str(call.data)}', message_id=call.message.message_id,
+                          chat_id=call.message.chat.id)
+    states[call.from_user.id] = 'event_deadline'
+    print(str(call.data[0]))
+    event_interval[call.from_user.id] = str(str(call.data))
+
+
+
 
 
 @bot.message_handler(commands=['delete_event'])
@@ -360,7 +391,7 @@ def edit_event(message: Message):
 
                         states[message.from_user.id] = 'edit_smth'
                         type_of_event[message.from_user.id] = "unregular"
-                        for_edit[message.from_user.id] = (message.from_user.id,"event")
+                        for_edit[message.from_user.id] = (message.chat.id, "event")
                     else:
                         bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
                 case _:
