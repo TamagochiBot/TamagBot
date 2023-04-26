@@ -26,11 +26,7 @@ type_of_event = {}
 state_of_regular = {}
 participants_of_regular = {}
 for_edit = {}
-last_regular_event = db.get_last_regular()
-
-id_for_edit = int()
-table_for_edit = str()
-
+last_regular_event = 0
 
 # Создание inline кнопок
 def gen_markup() -> telebot.types.InlineKeyboardMarkup:
@@ -229,9 +225,9 @@ def create_event(message: Message):
             db.save()
 
             event_data = list()
-            event_data.append(db.get_event_name(id))
-            event_data.append(db.get_event_description(id))
-            event_data.append(db.get_event_experience(id))
+            event_data.append(db.get_regular_name(id))
+            event_data.append(db.get_regular_description(id))
+            event_data.append(db.get_regular_experience(id))
 
             schedule.every(int(message.text)).seconds.do(run_threaded, table=table, id=id, message=message,
                                                          event_data=event_data)  # .tag(message.from_user.id)
@@ -292,6 +288,7 @@ def edit_event(message: Message):
                                                                                                   'Нерегулярное событие'
                                                                                                   ]))
         states[message.from_user.id] = 'choose_type'
+        for_edit[message.from_user.id] = (0, '')
     else:
         if db.exists(table='event', id=message.from_user.id, column='user_id'):
             id = message.from_user.id
@@ -320,6 +317,7 @@ def edit_event(message: Message):
                                               'edit_deadline'
                                           ])
 def edit_event(message: Message):
+    global last_regular_event
     current_state = str(states[message.from_user.id])
     empty_markup = telebot.types.ReplyKeyboardRemove()
     #if states[message.from_user.id] != "choose_id" and type_of_event[message.from_user.id] == "regular":
@@ -335,10 +333,10 @@ def edit_event(message: Message):
 
                         type_of_event[message.from_user.id] = "regular"
                         states[message.from_user.id] = "choose_id"
-                        for_edit[message.from_user.id][1] = "regular_event"
+                        for_edit[message.from_user.id] = (for_edit[message.from_user.id][0],"regular_event")
                     else:
                         bot.send_message(message.chat.id, 'У вас пока нет регулярных ивентов')
-                        del states[message.from_user.id]
+                       # del states[message.from_user.id]
                 case "Нерегулярное событие":
                     if db.exists(table='event', id=message.from_user.id, column='user_id'):
                         describe_event(id=message.from_user.id, table="event")
@@ -351,15 +349,14 @@ def edit_event(message: Message):
 
                         states[message.from_user.id] = 'edit_smth'
                         type_of_event[message.from_user.id] = "unregular"
-                        for_edit[message.from_user.id][0] = message.chat.id
-                        for_edit[message.from_user.id][1] = "event"
+                        for_edit[message.from_user.id] = (message.char.id,"event")
                     else:
                         bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
                 case _:
                     bot.send_message(message.chat.id, "Попробуй еще раз")
         case "choose_id":
             try:
-                for_edit[message.from_user.id][0] = int(message.text)
+                for_edit[message.from_user.id] = (int(message.text),"regular_event")
                 if not db.exists(table="regular_event", id=for_edit[message.from_user.id][0]):
                     raise "doesn't exist"
                 states[message.from_user.id] = "edit_smth"
@@ -477,6 +474,7 @@ def info(message: Message):
     func=lambda call: call.data in ['reg', 'irreg'] and call.from_user.id in states and states[
         call.from_user.id] in ['type_choose'])
 def admin_access(call: CallbackQuery):
+    global last_regular_event
     match call.data:
         case 'reg':
             list_of_events = get_list_of_regular()
@@ -1095,9 +1093,11 @@ def Customizing(message: Message):
 # CustomizePet
 
 def run_polling():
+    global last_regular_event
     print("Bot has been started...")
     bot.add_custom_filter(OpFilter())
     Thread(target=check_scheduler).start()
+    last_regular_event = db.get_last_regular()
     while True:
        # try:
             bot.polling(skip_pending=True)

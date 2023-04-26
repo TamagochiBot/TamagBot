@@ -196,7 +196,7 @@ class DataBase:
     def get_last_regular(self)->int:
         try:
             data = self.__cursor.execute(f"""SELECT MAX(id) FROM regular_event""").fetchone()
-            if data is None:
+            if data[0] is None:
                 return 0
             else:
                 return data[0]
@@ -228,7 +228,7 @@ class DataBase:
         self.__update_event(tele_id, "deadline",deadline)
     
     def get_regular_name(self, id:int) -> str:
-        return self.__fetchone_regular(id, "name")
+        return self.__fetchone_regular(id, "event_name")
     
     def get_regular_description(self, id:int) -> str:
         return self.__fetchone_regular(id, "description")
@@ -513,10 +513,3 @@ class DataBase:
             return None
         else:
             return data[0]
-
-db = DataBase("testDB.db")
-#db.create_player(123)
-print(db.get_bronze_count(123))
-db.set_silver_count(123, 12)
-db.save()
-print(db.get_silver_count(123))
