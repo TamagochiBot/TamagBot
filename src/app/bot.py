@@ -27,6 +27,7 @@ state_of_regular = {}
 participants_of_regular = {}
 for_edit = {}
 last_regular_event = 0
+event_data = {}
 
 # Создание inline кнопок
 def gen_markup() -> telebot.types.InlineKeyboardMarkup:
@@ -55,37 +56,39 @@ def MarkupFromList(listOfButtons):
     return markup
 
 
-def run_threaded(message: Message, id: int, table: str, event_data: list):
+def run_threaded(message: Message, id: int, table: str):    
     Thread(target=notification_event,
-           kwargs={"message": message, "id": id, "table": table, "event_data": event_data}).start()
+           kwargs={"message": message, "id": id, "table": table}).start()
+    
     if table == "event":
         return schedule.CancelJob
     elif state_of_regular[id] == "close":
-        del participants_of_regular[id]
-        del state_of_regular[id]
-        return schedule.CancelJob
+            del participants_of_regular[id]
+            del state_of_regular[id]
+            return schedule.CancelJob
 
 
-def notification_event(message: Message, id: int, table: str, event_data: list):
+def notification_event(message: Message, id: int, table: str):
+    global event_data
     if table == "event":
         bot.send_message(message.chat.id, text=f'Ваш ивент:\n'
-                                               f'{event_data[0]}\n'
-                                               f'Описание: {event_data[1]}\n'
-                                               f'Опыт: {event_data[2]}\n'
+                                               f'{event_data[id][0]}\n'
+                                               f'Описание: {event_data[id][1]}\n'
+                                               f'Опыт: {event_data[id][2]}\n'
                                                f'Закончился!')
         db.delete_event(id)
     elif state_of_regular[id] == "run":
-        bot.send_message(message.from_user.id, text=f'Ваш ивент:\n'
-                                                    f'{event_data[0]}\n'
-                                                    f'Описание: {event_data[1]}\n'
-                                                    f'Опыт: {event_data[2]}\n'
+        bot.send_message(message.chat.id, text=f'Ваш ивент:\n'
+                                                    f'{event_data[id][0]}\n'
+                                                    f'Описание: {event_data[id][1]}\n'
+                                                    f'Опыт: {event_data[id][2]}\n'
                                                     f'Участники: {participants_of_regular[id]}')
     # return schedule.CancelJob
 
 
 @bot.message_handler(commands=['help'])
 def helper(message: Message):
-    photo = open('app/Images/popug.jpg', 'rb')
+    photo = open('/Images/popug.jpg', 'rb')
     text = 'Привет, я ПопугБот 🦜\n\n' \
            'Что я могу?\n' \
            'Ты можешь создавать ивенты - регуляраные и нереулярные. ' \
@@ -228,14 +231,15 @@ def create_event(message: Message):
         case 'event_deadline':
             db.update(table=table, column='deadline', id=id, data=message.text)
             db.save()
+            
+            global event_data
 
-            event_data = list()
-            event_data.append(db.get_regular_name(id))
-            event_data.append(db.get_regular_description(id))
-            event_data.append(db.get_regular_experience(id))
+            if table != "event":
+                event_data[id] = (db.get_regular_name(id), db.get_regular_description(id), db.get_regular_experience(id))
+            else:
+                event_data[id] = (db.get_event_name(id), db.get_event_description(id), db.get_event_experience(id))
 
-            schedule.every(int(message.text)).seconds.do(run_threaded, table=table, id=id, message=message,
-                                                         event_data=event_data)  # .tag(message.from_user.id)
+            schedule.every(int(message.text)).seconds.do(run_threaded, table=table, id=id, message=message).tag(id)
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
         case _:
@@ -272,6 +276,7 @@ def delete_regular(message: Message):
         if not db.exists(table="regular_event", id=id):
             raise "doesn't exist"
         state_of_regular[id] = "close"
+        schedule.clear(id)
         db.delete_regular(id)
         bot.send_message(message.chat.id, "Готово")
         del states[message.from_user.id]
@@ -323,6 +328,7 @@ def edit_event(message: Message):
                                           ])
 def edit_event(message: Message):
     global last_regular_event
+    global event_data
     current_state = str(states[message.from_user.id])
     empty_markup = telebot.types.ReplyKeyboardRemove()
     #if states[message.from_user.id] != "choose_id" and type_of_event[message.from_user.id] == "regular":
@@ -354,7 +360,7 @@ def edit_event(message: Message):
 
                         states[message.from_user.id] = 'edit_smth'
                         type_of_event[message.from_user.id] = "unregular"
-                        for_edit[message.from_user.id] = (message.char.id,"event")
+                        for_edit[message.from_user.id] = (message.from_user.id,"event")
                     else:
                         bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
                 case _:
@@ -372,8 +378,7 @@ def edit_event(message: Message):
             except:
                 bot.send_message(message.chat.id, "Не подходящий айди. Попробуй еще раз")
         case 'edit_smth':
-            # table = types[message.from_user.id]
-            # print(table_for_edit + "\n\n\n\n\n\n")
+
             match message.text:
                 case 'Название':
                     states[message.from_user.id] = 'edit_name'
@@ -391,16 +396,19 @@ def edit_event(message: Message):
                     bot.send_message(message.chat.id, 'Попробуй еще раз')
         case 'edit_name':
             db.update(table=table_for_edit, id=id_for_edit, column='event_name', data=message.text)
+            event_data[id_for_edit] = (message.text, event_data[id_for_edit][1], event_data[id_for_edit][2])
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
             del states[message.from_user.id]
         case 'edit_description':
             db.update(table=table_for_edit, id=id_for_edit, column='description', data=message.text)
+            event_data[id_for_edit] = (event_data[id_for_edit][0], message.text, event_data[id_for_edit][2])
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
             del states[message.from_user.id]
         case 'edit_exp':
             db.update(table=table_for_edit, id=id_for_edit, column='experience', data=int(message.text))
+            event_data[id_for_edit] = (event_data[id_for_edit][0], event_data[id_for_edit][1], message.text)
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
             del states[message.from_user.id]
@@ -408,7 +416,12 @@ def edit_event(message: Message):
             db.update(table=table_for_edit, id=id_for_edit, column='deadline', data=message.text)
             bot.send_message(message.chat.id, 'Готово!', reply_markup=empty_markup)
             db.save()
+
             del states[message.from_user.id]
+
+            schedule.clear(id_for_edit)
+            schedule.every(int(message.text)).seconds.do(run_threaded, table=table_for_edit, id=id_for_edit, message=message,
+                                                        ).tag(id_for_edit)
         case _:
             bot.send_message(message.chat.id, 'Что то пошло не так')
 
