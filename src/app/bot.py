@@ -354,7 +354,7 @@ def edit_event(message: Message):
 
                         states[message.from_user.id] = 'edit_smth'
                         type_of_event[message.from_user.id] = "unregular"
-                        for_edit[message.from_user.id] = (message.char.id,"event")
+                        for_edit[message.from_user.id] = (message.chat.id, "event")
                     else:
                         bot.send_message(message.chat.id, 'У вас нет ивентов, которые можно редактировать')
                 case _:
@@ -512,7 +512,8 @@ def choose_event(message: Message):
             if db.exists(table='event', id=message.from_user.id, column='user_id'):
                 experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
                 bot.send_message(message.chat.id,
-                                 f'Попуг {db.get_user_name(execute[message.from_user.id])} получил {db.get_event_experience(message.from_user.id)} опыта')
+                                 f'Попуг {db.get_user_name(execute[message.from_user.id])} получил'
+                                 f' {db.get_event_experience(message.from_user.id)} опыта')
             else:
                 bot.send_message(message.chat.id, 'Нет такого ивента')
     except:
@@ -556,6 +557,12 @@ kb_it_ce.add(btn_change)
 btn_dont_change = InlineKeyboardButton(text='Не менять', callback_data='dont change')
 kb_it_ce.add(btn_dont_change)
 
+kb_it_ce_sn = InlineKeyboardMarkup(row_width=1)
+btn_change_skin = InlineKeyboardButton(text='Заменить', callback_data='change skin')
+kb_it_ce_sn.add(btn_change_skin)
+btn_dont_change_skin = InlineKeyboardButton(text='Не менять', callback_data='dont change skin')
+kb_it_ce_sn.add(btn_dont_change_skin)
+
 
 def switch_item_from_case(message: Message, person_id, item_type, item_name, item_stats, item_mod, item_rare):
     db_item_name = ""
@@ -577,7 +584,7 @@ def switch_item_from_case(message: Message, person_id, item_type, item_name, ite
     current_name = db.get_worn_item_name(person_id, db_item_name)
     current_stats = db.get_worn_item_stats(person_id, db_item_name)
     current_mod = db.get_worn_item_mod(person_id, db_item_name)
-    current_rare = db.get_worn_item_rare(person_id, db_item_name)
+    current_rare = db.get_worn_item_rarity(person_id, db_item_name)
 
     bot.send_message(message.chat.id, text=f'Ого! Тебе выпал предмет {item_name}! \n'
                                            f'Хочешь поменять его с {current_name}? \n'
@@ -591,6 +598,28 @@ def switch_item_from_case(message: Message, person_id, item_type, item_name, ite
                                            f'Редкость: {current_rare} \n'
                                            f'Статы: {current_stats} \n'
                                            f'Модификаторы: {current_mod} \n', reply_markup=kb_it_ce)
+
+
+def switch_skin_from_case(message: Message, person_id, item_type, item_name, item_rare):
+    item_type_for_text = "skin"
+    db_item_name = ""
+    current_skin = ""
+    match item_type:
+        case 0:
+            db_item_name = "helmet"
+            item_type_for_text = "Шлем"
+            current_skin = db.get_head_skin(person_id)
+        case 1:
+            db_item_name = "chestplate"
+            item_type_for_text = "Нагрудник"
+            current_skin = db.get_body_skin(person_id)
+        case 2:
+            db_item_name = "item1"
+            item_type_for_text = "Оружие ближнего боя"
+            current_skin = db.get_weapon_skin(person_id)
+    bot.send_message(message.chat.id, text=f'Невероятно, тебе выпал скин {item_name}, редкости {item_rare}! \n'
+                                           f'Хочешь сменить старый скин {current_skin} на {item_name}? \n'
+                                           f'Не бойся, оба скина будут тебе доступны', )
 
 
 @bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
@@ -631,15 +660,30 @@ def get_item_from_case(message: Message, person_id, case_type):
     case_type = ""
     if message == open_case_list[0]:
         case_type = "bronze"
+        if db.get_bronze_count(person_id) == 0:
+            bot.send_message(message.chat.id, text="У тебя нет бронзовых сундуков!")
+            return
     elif message == open_case_list[1]:
         case_type = "silver"
+        if db.get_silver_count(person_id) == 0:
+            bot.send_message(message.chat.id, text="У тебя нет серебряных сундуков!")
+            return
     elif message == open_case_list[2]:
         case_type = "gold"
+        if db.get_gold_count(person_id) == 0:
+            bot.send_message(message.chat.id, text="У тебя нет золотых сундуков!")
+            return
     elif message == open_case_list[3]:
         case_type = "skin"
+        if db.get_skin_count(person_id) == 0:
+            bot.send_message(message.chat.id, text="У тебя нет сундуков со скинами!")
+            return
 
     result = int(random.random() * 100)
-    type_result = int(random.random() * 4)
+    if case_type == "skin":
+        type_result = int(random.random() * 3)
+    else:
+        type_result = int(random.random() * 4)
     list_navigator = type_result
     number_of_item_in_list = 0
 
@@ -688,37 +732,37 @@ def get_item_from_case(message: Message, person_id, case_type):
                              * 2 * math.sqrt(random.random() * 30 + 15))
             mod_random = random.random() * 100
             if mod_random < 80:
-                mod_random = "Госстандарт"
+                item_mod = "Госстандарт"
             elif mod_random < 95:
-                mod_random = "Только мечом"
+                item_mod = "Только мечом"
             else:
-                mod_random = "Мудрость древних ара"
+                item_mod = "Мудрость древних ара"
         elif item_type == 1:
             item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                              * 0.05 * math.sqrt(random.random() * 30 + 15))
             mod_random = random.random() * 100
             if mod_random < 80:
-                mod_random = "Пернатая броня"
+                item_mod = "Пернатая броня"
             elif mod_random < 95:
-                mod_random = "Без наворотов"
+                item_mod = "Без наворотов"
             else:
-                mod_random = "Ядовитые доспехи"
+                item_mod = "Ядовитые доспехи"
         elif item_type == 2:
             item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                              * 0.5 * math.sqrt(random.random() * 30 + 15))
             mod_random = random.random() * 100
             if mod_random < 85:
-                mod_random = "Снаряжение новичка"
+                item_mod = "Снаряжение новичка"
             elif mod_random < 95:
-                mod_random = "Критовый попуг"
+                item_mod = "Критовый попуг"
             else:
-                mod_random = "Убийца богов"
+                item_mod = "Убийца богов"
         elif item_type == 3:
             item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
                              * 0.8 * math.sqrt(random.random() * 30 + 15))
-        switch_item_from_case(person_id, item_type, item_name, item_stats, item_mod, item_rare)
+        switch_item_from_case(message, person_id, item_type, item_name, item_stats, item_mod, item_rare)
     else:
-        switch_skin_item(message, person_id, item_name, item_rare)
+        switch_skin_from_case(message, person_id, item_type, item_name, item_rare)
 
 
 def experience_change(person_id, experience):
