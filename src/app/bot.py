@@ -175,6 +175,7 @@ def create_event(message: Message):
         else:
             bot.send_message(message.chat.id, text='Сперва зарегистрируйтесь')
 
+
 def check_scheduler():
     while True:
         schedule.run_pending()
@@ -641,6 +642,52 @@ def suspect(message: Message):
 
 
 # FUN
+
+
+buy_list = ["Купить бронзовый сундук", "Купить серебряный сундук",
+            "Купить золотой сундук", "Купить сундук скинов"]
+
+
+@bot.message_handler(func=lambda message: message.text in buy_list)
+def buy_case(message: Message):
+    person_id = message.from_user.id
+    match message.text:
+        case "Купить бронзовый сундук":
+            balance = db.get_balance(person_id)
+            if balance < 100:
+                bot.send_message(person_id, "Вам не хватает печенек(")
+                return
+            else:
+                db.set_balance(person_id, balance - 100)
+                db.set_bronze_count(person_id, db.get_bronze_count(person_id) + 1)
+                bot.send_message(person_id, text="Поздравляю, бронзовый кейс твой!")
+        case "Купить серебряный сундук":
+            balance = db.get_balance(person_id)
+            if balance < 230:
+                bot.send_message(person_id, "Вам не хватает печенек(")
+                return
+            else:
+                db.set_balance(person_id, balance - 230)
+                db.set_silver_count(person_id, db.get_silver_count(person_id) + 1)
+                bot.send_message(person_id, text="Поздравляю, серебряный кейс твой!")
+        case "Купить золотой сундук":
+            balance = db.get_balance(person_id)
+            if balance < 350:
+                bot.send_message(person_id, "Вам не хватает печенек(")
+                return
+            else:
+                db.set_balance(person_id, balance - 350)
+                db.set_golden_count(person_id, db.get_golden_count(person_id) + 1)
+                bot.send_message(person_id, text="Поздравляю, золотой кейс твой!")
+        case "Купить бронзовый сундук":
+            balance = db.get_balance(person_id)
+            if balance < 1000:
+                bot.send_message(person_id, "Вам не хватает печенек(")
+                return
+            else:
+                db.set_balance(person_id, balance - 1000)
+                db.set_skin_count(person_id, db.get_skin_count(person_id) + 1)
+                bot.send_message(person_id, text="Поздравляю, кейс со скинчиками твой!")
 
 
 kb_it_ce = InlineKeyboardMarkup(row_width=1)
