@@ -55,6 +55,8 @@ def init():
             description TEXT NOT NULL DEFAULT '',
             experience INTEGER NOT NULL DEFAULT 0,
             deadline DATETIME DEFAULT NULL,
+            type_of_deadline TEXT NOT NULL DEFAULT "минутах",
+            chat_id INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES player(id)
             ON DELETE SET NULL ON UPDATE CASCADE
             );
@@ -68,7 +70,9 @@ def init():
             description TEXT NOT NULL DEFAULT '',
             experience INTEGER NOT NULL DEFAULT 0,
             deadline TEXT DEFAULT NULL,
+            type_of_deadline TEXT NOT NULL DEFAULT "минутах",
             list_of_players TEXT NOT NULL DEFAULT '',
+            chat_id INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY(user_id) REFERENCES player(id)
             ON DELETE SET NULL ON UPDATE CASCADE
             );

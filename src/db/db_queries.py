@@ -161,21 +161,21 @@ class DataBase:
     def is_admin(self, id:int) -> bool:
         return bool(self.__fetchone_player(id,"is_admin"))
 
-    def create_event(self, id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
+    def create_event(self, id: int, chat_id:int,event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = "",type_of_deadline:str = "минутах") -> None:
         """
         Inserts an event in the "event" table
         """
-        self.__cursor.execute("""INSERT INTO event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?)""",
-                              (id, event_name, description, experience, deadline))
+        self.__cursor.execute("""INSERT INTO event(user_id,chat_id,event_name,description,experience,deadline,type_of_deadline) VALUES (?,?,?,?,?,?,?)""",
+                              (id, chat_id, event_name, description, experience, deadline,type_of_deadline))
 
         self.save()
 
-    def create_regular_event(self, id:int ,tele_id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
+    def create_regular_event(self, id:int, chat_id:int,tele_id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = "", type_of_deadline:str = "минутах") -> None:
         """
         Inserts a regular event in the "regular_event" table
         """
-        self.__cursor.execute("""INSERT INTO regular_event(id,user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?,?)""",
-                              (id, tele_id, event_name, description, experience, deadline))
+        self.__cursor.execute("""INSERT INTO regular_event(id,user_id,chat_id,event_name,description,experience,deadline,type_of_deadline) VALUES (?,?,?,?,?,?,?,?)""",
+                              (id, chat_id, tele_id, event_name, description, experience, deadline,type_of_deadline))
         
         self.save()
 
@@ -215,6 +215,9 @@ class DataBase:
     def get_event_deadline(self, tele_id:int) -> str:
         return self.__fetchone_event(tele_id, "deadline")
     
+    def get_event_deadline_type(self, tele_id:int) -> str:
+        return self.__fetchone_event(tele_id, "type_of_deadline")
+    
     def set_event_name(self, tele_id:int, name:str) -> None:
         self.__update_event(tele_id, "name", name)
     
@@ -226,6 +229,9 @@ class DataBase:
     
     def set_event_deadline(self, tele_id:int, deadline:str) -> None:
         self.__update_event(tele_id, "deadline",deadline)
+
+    def set_event_deadline_type(self, tele_id:int, type:str) -> None:
+        self.__update_event(tele_id, "type_of_deadline", type)
     
     def get_regular_name(self, id:int) -> str:
         return self.__fetchone_regular(id, "event_name")
@@ -238,6 +244,9 @@ class DataBase:
 
     def get_regular_deadline(self, id:int) -> str:
         return self.__fetchone_regular(id, "deadline")
+    
+    def get_regular_deadline_type(self, id:int) -> str:
+        return self.__fetchone_regular(id, "type_of_deadline")
     
     def get_regular_players(self, id:int) -> str:
         return self.__fetchone_regular(id, "list_of_players")
@@ -261,6 +270,9 @@ class DataBase:
     
     def set_regular_deadline(self, id:int, deadline:str) -> None:
         self.__update_regular_event(id, "deadline",deadline)
+
+    def set_regular_deadline_type(self, id:int, type:str) -> None:
+        self.__update_regular(id, "type_of_deadline", type)
 
     def update(self, table: str, id:int, column: str, data, type_of_item:str = '') -> None:
         '''

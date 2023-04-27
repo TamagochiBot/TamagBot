@@ -19,8 +19,7 @@ from app.player import Player
 
 player_info = Player()
 
-#bot = telebot.TeleBot(os.environ["TOKEN"])
-bot = telebot.TeleBot('5809330693:AAEH7Zdx4-OQER1Z0OewmM3NZiI06ffNi4g')
+bot = telebot.TeleBot(os.environ["TOKEN"])
 
 states = {}
 type_of_event = {}
@@ -58,25 +57,25 @@ def MarkupFromList(listOfButtons):
     return markup
 
 
-def run_threaded(message: Message, id: int, table: str):
+def run_threaded(chat_id:int, id: int, table: str):
     Thread(target=notification_event,
-           kwargs={"message": message, "id": id, "table": table}).start()
+           kwargs={"chat_id":chat_id, "id": id, "table": table}).start()
 
     if table == "event":
         return schedule.CancelJob
 
 
-def notification_event(message: Message, id: int, table: str):
+def notification_event(chat_id:int, id: int, table: str):
     global event_data
     if table == "event":
-        bot.send_message(message.chat.id, text=f'Ваш ивент:\n'
+        bot.send_message(chat_id, text=f'Ваш ивент:\n'
                                                f'{event_data[id][0]}\n'
                                                f'Описание: {event_data[id][1]}\n'
                                                f'Опыт: {event_data[id][2]}\n'
                                                f'Закончился!')
         db.delete_event(id)
     else:
-        bot.send_message(message.chat.id, text=f'Ваш ивент:\n'
+        bot.send_message(chat_id, text=f'Ваш ивент:\n'
                                                f'{event_data[id][0]}\n'
                                                f'Описание: {event_data[id][1]}\n'
                                                f'Опыт: {event_data[id][2]}\n'
@@ -168,11 +167,13 @@ def create_event(message: Message):
         else:
             bot.send_message(message.chat.id, text='Вы не можете иметь более одного ивента')
     else:
-        db.create_event(id=message.from_user.id)
-        bot.send_message(message.chat.id, 'Напиши имя ивента')
-        states[message.from_user.id] = 'event_name'
-        type_of_event[message.from_user.id] = 'unregular'
-
+        if db.exists(table="player", id=message.from_user.id, column='id'):
+            db.create_event(id=message.from_user.id, chat_id=message.chat.id)
+            bot.send_message(message.chat.id, 'Напиши имя ивента')
+            states[message.from_user.id] = 'event_name'
+            type_of_event[message.from_user.id] = 'unregular'
+        else:
+            bot.send_message(message.chat.id, text='Сперва зарегистрируйтесь')
 
 def check_scheduler():
     while True:
@@ -185,7 +186,7 @@ def create_regular(message: Message):
     global last_regular_event
     if db.is_admin(message.from_user.id):
         last_regular_event += 1
-        db.create_regular_event(id=last_regular_event,tele_id=message.from_user.id)
+        db.create_regular_event(id=last_regular_event,tele_id=message.from_user.id,chat_id=message.chat.id)
         bot.send_message(message.chat.id, 'Напиши имя ивента')
         states[message.from_user.id] = 'event_name'
         type_of_event[message.from_user.id] = 'regular'
@@ -253,13 +254,13 @@ def create_event(message: Message):
 
             match event_interval[message.from_user.id]:
                 case 'минутах':
-                    schedule.every(int(message.text)).minutes.do(run_threaded, table=table, id=id, message=message).tag(id)
+                    schedule.every(int(message.text)).minutes.do(run_threaded, table=table, id=id, chat_id=message.chat.id).tag(id)
                 case 'часах':
-                    schedule.every(int(message.text)).hours.do(run_threaded, table=table, id=id, message=message).tag(id)
+                    schedule.every(int(message.text)).hours.do(run_threaded, table=table, id=id, chat_id=message.chat.id).tag(id)
                 case 'днях':
-                    schedule.every(int(message.text)).days.do(run_threaded, table=table, id=id, message=message).tag(id)
+                    schedule.every(int(message.text)).days.do(run_threaded, table=table, id=id, chat_id=message.chat.id).tag(id)
                 case 'неделях':
-                    schedule.every(int(message.text)).weeks.do(run_threaded, table=table, id=id, message=message).tag(id)
+                    schedule.every(int(message.text)).weeks.do(run_threaded, table=table, id=id, chat_id=message.chat.id).tag(id)
 
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
@@ -348,7 +349,7 @@ def describe_event(id: int, table: str) -> None:
     bot.send_message(id, text=f'\nИвент: {db.get_event_name(id)}\n'
                               f'Описание: {db.get_event_description(id)}\n'
                               f'Опыт: {db.get_event_experience(id)}\n'
-                              f'Дедлайн: {db.get_event_deadline(id)}\n\n')
+                              f'Дедлайн в {db.get_event_deadline_type(id)}: {db.get_event_deadline(id)}\n\n')
 
 
 @bot.message_handler(commands=['edit_event'])
@@ -366,7 +367,7 @@ def edit_event(message: Message):
             bot.send_message(message.chat.id, 'Что ты хочешь поменять?', reply_markup=MarkupFromList(['Название',
                                                                                                       'Описание',
                                                                                                       'Количество опыта',
-                                                                                                      'Дедалйн']))
+                                                                                                      'Дедлайн']))
             states[message.from_user.id] = 'edit_smth'
             type_of_event[message.from_user.id] = "unregular"
             id_for_edit = message.from_user.id
@@ -490,13 +491,13 @@ def edit_event(message: Message):
             schedule.clear(id_for_edit)
             match event_interval[message.from_user.id]:
                 case 'минутах':
-                    schedule.every(int(message.text)).minutes.do(run_threaded, table=table_for_edit, id=id_for_edit, message=message).tag(id_for_edit)
+                    schedule.every(int(message.text)).minutes.do(run_threaded, table=table_for_edit, id=id_for_edit, chat_id=message.chat.id).tag(id_for_edit)
                 case 'часах':
-                    schedule.every(int(message.text)).hours.do(run_threaded, table=table_for_edit, id=id_for_edit, message=message).tag(id_for_edit)
+                    schedule.every(int(message.text)).hours.do(run_threaded, table=table_for_edit, id=id_for_edit, chat_id=message.chat.id).tag(id_for_edit)
                 case 'днях':
-                    schedule.every(int(message.text)).days.do(run_threaded, table=table_for_edit, id=id_for_edit, message=message).tag(id_for_edit)
+                    schedule.every(int(message.text)).days.do(run_threaded, table=table_for_edit, id=id_for_edit, chat_id=message.chat.id).tag(id_for_edit)
                 case 'неделях':
-                    schedule.every(int(message.text)).weeks.do(run_threaded, table=table_for_edit, id=id_for_edit, message=message).tag(id_for_edit)
+                    schedule.every(int(message.text)).weeks.do(run_threaded, table=table_for_edit, id=id_for_edit, chat_id=message.chat.id).tag(id_for_edit)
 
             del states[message.from_user.id]
             del type_of_event[message.from_user.id]
@@ -509,7 +510,7 @@ def get_list_of_regular():
     text = str()
     lst_of_events = db.fetchall("regular_event")
     for event in lst_of_events:
-        text += f'''ID:{event[0]}\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
+        text += f'''ID:{event[0]}\nИвент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн в {event[6]}: {event[5]}\n\n'''
     return text
 
 
@@ -517,7 +518,7 @@ def get_list_of_unregular():
     text = str()
     lst_of_events = db.fetchall("event")
     for event in lst_of_events:
-        text += f'''Ивент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн: {event[5]}\n\n'''
+        text += f'''Ивент: {event[1]}\nОписание: {event[3]} \nОпыт: {event[4]} \nДедлайн {event[6]}: {event[5]}\n\n'''
     return text
 
 
@@ -1317,6 +1318,41 @@ def Customizing(message: Message):
             else:
                 bot.send_message(message.chat.id, "Вам недоступен данный скин", reply_markup=ReplyKeyboardRemove())
 
+def init_events():
+    lst_of_regular = db.fetchall("regular_event")
+    
+    global event_data
+    
+    for regular in lst_of_regular:
+        id, name, user_id, description, exp, deadline, deadline_type, players, chat_id = regular
+        event_data[int(id)] = (name,description,exp)
+        participants_of_regular[id] = players
+        match deadline_type:
+                case 'минутах':
+                    schedule.every(int(deadline)).minutes.do(run_threaded, chat_id=int(chat_id),table="regular_event", id=int(id)).tag(int(id))
+                case 'часах':
+                    schedule.every(int(deadline)).hours.do(run_threaded, chat_id=int(chat_id), table="regular_event", id=int(id)).tag(int(id))
+                case 'днях':
+                    schedule.every(int(deadline)).days.do(run_threaded, chat_id=int(chat_id), table="regular_event", id=int(id)).tag(int(id))
+                case 'неделях':
+                    schedule.every(int(deadline)).weeks.do(run_threaded, chat_id=int(chat_id), table="regular_event", id=int(id)).tag(int(id))
+    
+    lst = db.fetchall("event")
+
+    for event in lst:
+        id, name, user_id, description, exp, deadline, deadline_type, chat_id = event
+        event_data[int(user_id)] = (name,description,exp)
+        match deadline_type:
+                case 'минутах':
+                    schedule.every(int(deadline)).minutes.do(run_threaded, chat_id=int(chat_id),table="event", id=int(user_id)).tag(int(user_id))
+                case 'часах':
+                    schedule.every(int(deadline)).hours.do(run_threaded, chat_id=int(chat_id),table="event", id=int(user_id)).tag(int(user_id))
+                case 'днях':
+                    schedule.every(int(deadline)).days.do(run_threaded, chat_id=int(chat_id),table="event", id=int(user_id)).tag(int(user_id))
+                case 'неделях':
+                    schedule.every(int(deadline)).weeks.do(run_threaded, chat_id=int(chat_id),table="event", id=int(user_id)).tag(int(user_id))
+    
+
 
 # CustomizePet
 
@@ -1325,6 +1361,7 @@ def run_polling():
     print("Bot has been started...")
     bot.add_custom_filter(OpFilter())
     Thread(target=check_scheduler).start()
+    init_events()
     last_regular_event = db.get_last_regular()
     while True:
        # try:
