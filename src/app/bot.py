@@ -653,7 +653,7 @@ def switch_item_from_case(message: Message, person_id, item_type, item_name, ite
     current_rare = db.get_worn_item_rarity(person_id, db_item_name)
     states[person_id] = "switching_item"
     case_data[person_id] = [current_name, current_stats, current_rare, current_mod, db_item_name]
-    bot.send_message(message.chat.id, text=f'Ого! Тебе выпал предмет {item_name}! \n'
+    bot.send_message(message.chat.id, text=f'Ого! Тебе выпал предмет *{item_name}*! \n'
                                            f'Хочешь поменять его с {current_name}? \n'
                                            f'Выпало {item_name}: \n'
                                            f'Тип: {item_type_for_text} \n'
@@ -664,7 +664,7 @@ def switch_item_from_case(message: Message, person_id, item_type, item_name, ite
                                            f'Тип: {item_type_for_text} \n'
                                            f'Редкость: {current_rare} \n'
                                            f'Статы: {current_stats} \n'
-                                           f'Модификаторы: {current_mod} \n', reply_markup=kb_it_ce)
+                                           f'Модификаторы: {current_mod} \n', reply_markup=kb_it_ce, parse_mode="Markdown")
 
 
 def switch_skin_from_case(message: Message, person_id, item_type, item_name, item_rare):
@@ -696,11 +696,11 @@ def switch_skin_from_case(message: Message, person_id, item_type, item_name, ite
 def switching_or_not(call: CallbackQuery):
     if call.data == "change":
         person_id = call.from_user.id
-        new_name = case_data[0]
-        new_stats = case_data[1]
-        new_rare = case_data[2]
-        new_mod = case_data[3]
-        new_type = case_data[4]
+        new_name = case_data[person_id][0]
+        new_stats = case_data[person_id][1]
+        new_rare = case_data[person_id][2]
+        new_mod = case_data[person_id][3]
+        new_type = case_data[person_id][4]
         new_item_id = db.create_item(person_id, new_type, new_name, new_rare, new_stats, new_mod)
         db.set_item(person_id, new_type, new_item_id)
         bot.send_message(person_id, text="Отличное решение!")
@@ -751,22 +751,22 @@ open_case_list = ["Открыть бронзовый сундук", "Откры�
 def get_item_from_case(message: Message):
     person_id = message.from_user.id
     case_type = ""
-    if message == open_case_list[0]:
+    if message.text == open_case_list[0]:
         case_type = "bronze"
         if db.get_bronze_count(person_id) == 0:
             bot.send_message(message.chat.id, text="У тебя нет бронзовых сундуков!")
             return
-    elif message == open_case_list[1]:
+    elif message.text == open_case_list[1]:
         case_type = "silver"
         if db.get_silver_count(person_id) == 0:
             bot.send_message(message.chat.id, text="У тебя нет серебряных сундуков!")
             return
-    elif message == open_case_list[2]:
+    elif message.text == open_case_list[2]:
         case_type = "gold"
         if db.get_gold_count(person_id) == 0:
             bot.send_message(message.chat.id, text="У тебя нет золотых сундуков!")
             return
-    elif message == open_case_list[3]:
+    elif message.text == open_case_list[3]:
         case_type = "skin"
         if db.get_skin_count(person_id) == 0:
             bot.send_message(message.chat.id, text="У тебя нет сундуков со скинами!")
