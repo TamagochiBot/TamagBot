@@ -170,12 +170,12 @@ class DataBase:
 
         self.save()
 
-    def create_regular_event(self, id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
+    def create_regular_event(self, id:int ,tele_id: int, event_name:str = "EVENT",description: str = 'none', experience: int = 0, deadline: str = 0) -> None:
         """
         Inserts a regular event in the "regular_event" table
         """
-        self.__cursor.execute("""INSERT INTO regular_event(user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?)""",
-                              (id, event_name, description, experience, deadline))
+        self.__cursor.execute("""INSERT INTO regular_event(id,user_id,event_name,description,experience,deadline) VALUES (?,?,?,?,?,?)""",
+                              (id, tele_id, event_name, description, experience, deadline))
         
         self.save()
 
