@@ -28,6 +28,8 @@ participants_of_regular = {}
 for_edit = {}
 last_regular_event = 0
 event_data = {}
+case_data = {}
+
 
 # Создание inline кнопок
 def gen_markup() -> telebot.types.InlineKeyboardMarkup:
@@ -79,10 +81,10 @@ def notification_event(message: Message, id: int, table: str):
         db.delete_event(id)
     elif state_of_regular[id] == "run":
         bot.send_message(message.chat.id, text=f'Ваш ивент:\n'
-                                                    f'{event_data[id][0]}\n'
-                                                    f'Описание: {event_data[id][1]}\n'
-                                                    f'Опыт: {event_data[id][2]}\n'
-                                                    f'Участники: {participants_of_regular[id]}')
+                                               f'{event_data[id][0]}\n'
+                                               f'Описание: {event_data[id][1]}\n'
+                                               f'Опыт: {event_data[id][2]}\n'
+                                               f'Участники: {participants_of_regular[id]}')
     # return schedule.CancelJob
 
 
@@ -115,12 +117,12 @@ def start_message(message: Message):
 
 # Регистрация в БД
 @bot.message_handler(func=lambda message: message.from_user.id in states and
-                                          states[message.from_user.id] == 'registry')
+                     states[message.from_user.id] == 'registry')
 def registration(message: Message):
     db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.username)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
-    random_body=str(random.randint(1,5))
-    random_head=str(random.randint(1,5))
+    random_body = str(random.randint(1,5))
+    random_head = str(random.randint(1,5))
     db.add_body_skin(message.from_user.id, random_body)
     db.add_head_skin(message.from_user.id, random_head)
     db.add_weapon_skin(message.from_user.id, "0")
@@ -129,10 +131,11 @@ def registration(message: Message):
     db.set_weapon_skin(message.from_user.id, "0")
     db.save()
     pet_image = CreatePetImage(random_body, random_head, "0")
-    bot.send_photo(message.chat.id, pet_image, caption= "Это ваш новый персонаж!\n"
-                                                        "В дальнейшем вы сможете"
-                                                             "изменить внешний вид своего"
-                                                             "персонажа с помощью команды /customize_pet", reply_markup=ReplyKeyboardRemove())
+    bot.send_photo(message.chat.id, pet_image, caption="Это ваш новый персонаж!\n"
+                                                       "В дальнейшем вы сможете"
+                                                       "изменить внешний вид своего"
+                                                       "персонажа с помощью команды /customize_pet",
+                   reply_markup=ReplyKeyboardRemove())
     del states[message.from_user.id]
 
 
@@ -258,7 +261,6 @@ def create_event(message: Message):
                 case 'неделях':
                     schedule.every(int(message.text)).weeks.do(run_threaded, table=table, id=id, message=message).tag(id)
 
-
             bot.send_message(message.chat.id, text='Ивент успешно создан')
             del states[message.from_user.id]
             del event_interval[message.from_user.id]
@@ -281,7 +283,8 @@ def deadline_interval(call: CallbackQuery):
 
 @bot.callback_query_handler(func=lambda call: call.from_user.id in states and states[call.from_user.id] == 'event_case')
 def event_case(call: CallbackQuery):
-    bot.edit_message_text(message_id=call.message.message_id, chat_id=call.message.chat.id, text='Напишите количесво опыта')
+    bot.edit_message_text(message_id=call.message.message_id, chat_id=call.message.chat.id,
+                          text='Напишите количесво опыта')
     match call.data:
         case 'none':
             ...
@@ -319,7 +322,7 @@ def delete_regular(message: Message):
 
 
 @bot.message_handler(func=lambda message: message.from_user.id in states and
-                                          states[message.from_user.id] == "delete_regular")
+                     states[message.from_user.id] == "delete_regular")
 def delete_regular(message: Message):
     try:
         id = int(message.text)
@@ -368,7 +371,7 @@ def edit_event(message: Message):
 
 
 @bot.message_handler(func=lambda message: message.from_user.id in states and
-                                          states[message.from_user.id] in [
+                     states[message.from_user.id] in [
                                               'choose_type',
                                               'choose_id',
                                               'edit_smth',
@@ -418,7 +421,7 @@ def edit_event(message: Message):
                     bot.send_message(message.chat.id, "Попробуй еще раз")
         case "choose_id":
             try:
-                for_edit[message.from_user.id] = (int(message.text),"regular_event")
+                for_edit[message.from_user.id] = (int(message.text), "regular_event")
                 if not db.exists(table="regular_event", id=for_edit[message.from_user.id][0]):
                     raise "doesn't exist"
                 states[message.from_user.id] = "edit_smth"
@@ -538,7 +541,7 @@ def info(message: Message):
     else:
         bot.send_message(message.chat.id, 'akjbrvnajv')
 
- 
+
 @bot.callback_query_handler(
     func=lambda call: call.data in ['reg', 'irreg'] and call.from_user.id in states and states[
         call.from_user.id] in ['type_choose'])
@@ -576,7 +579,7 @@ def choose_event(message: Message):
             if db.exists(table='event', id=message.from_user.id, column='user_id'):
                 db.add_regular_player(for_execute,message.from_user.username)
                 experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
-                bot.send_message(message.chat.id,'Попуг выполинл ивент и был добавлен с спикок выполнивших его')
+                bot.send_message(message.chat.id, 'Попуг выполинл ивент и был добавлен с спикок выполнивших его')
             else:
                 bot.send_message(message.chat.id, 'Нет такого ивента')
     except:
@@ -648,7 +651,8 @@ def switch_item_from_case(message: Message, person_id, item_type, item_name, ite
     current_stats = db.get_worn_item_stats(person_id, db_item_name)
     current_mod = db.get_worn_item_mod(person_id, db_item_name)
     current_rare = db.get_worn_item_rarity(person_id, db_item_name)
-
+    states[person_id] = "switching_item"
+    case_data[person_id] = [current_name, current_stats, current_rare, current_mod, db_item_name]
     bot.send_message(message.chat.id, text=f'Ого! Тебе выпал предмет {item_name}! \n'
                                            f'Хочешь поменять его с {current_name}? \n'
                                            f'Выпало {item_name}: \n'
@@ -680,18 +684,43 @@ def switch_skin_from_case(message: Message, person_id, item_type, item_name, ite
             db_item_name = "item1"
             item_type_for_text = "Оружие ближнего боя"
             current_skin = db.get_weapon_skin(person_id)
+    states[person_id] = "switching_skin"
+    case_data[person_id] = [item_name, item_rare]
     bot.send_message(message.chat.id, text=f'Невероятно, тебе выпал скин {item_name}, редкости {item_rare}! \n'
                                            f'Хочешь сменить старый скин {current_skin} на {item_name}? \n'
-                                           f'Не бойся, оба скина будут тебе доступны', )
+                                           f'Не бойся, оба скина будут тебе доступны', reply_markup=kb_it_ce)
 
 
-@bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change'])
-def switching_or_not(person_id, item_type, item_name, item_stats, item_mod, item_rare):
-    print()
+@bot.callback_query_handler(func=lambda call: call.data in ['change', 'dont change']
+                            and call.from_user.id in states and states[call.from_user.id] == "switching_item")
+def switching_or_not(call: CallbackQuery):
+    if call.data == "change":
+        person_id = call.from_user.id
+        new_name = case_data[0]
+        new_stats = case_data[1]
+        new_rare = case_data[2]
+        new_mod = case_data[3]
+        new_type = case_data[4]
+        new_item_id = db.create_item(person_id, new_type, new_name, new_rare, new_stats, new_mod)
+        db.set_item(person_id, new_type, new_item_id)
+        bot.send_message(person_id, text="Отличное решение!")
+        db.save()
+    else:
+        bot.send_message(call.from_user.id, text="Эх, не повезло. В следующий раз обязательно повезет!")
 
 
-def switch_skin_item(message: Message, person_id, item_name, item_rare):
-    print()
+@bot.callback_query_handler(func=lambda call: call.data in ['change skin', 'dont change skin']
+                            and call.from_user.id in states and states[call.from_user.id] == "switching_skin")
+def switch_skin_item(call: CallbackQuery):
+    if call.data == "change skin":
+        person_id = call.from_user.id
+        new_name = case_data[0]
+        new_rare = case_data[1]
+
+        bot.send_message(person_id, text="Отличное решение!")
+        db.save()
+    else:
+        bot.send_message(call.from_user.id, text="Ничего страшного, этот скин все равно теперь в твоей коллекции!")
 
 
 skin_case_list = ["Кремниевая репа", "Нейронный купол", "Циркуляционная черепно-мозговая крышка", "Бионическая башня", "Бинарный котёл",
@@ -719,7 +748,8 @@ open_case_list = ["Открыть бронзовый сундук", "Откры�
 
 
 @bot.message_handler(func=lambda message: message.text in open_case_list)
-def get_item_from_case(message: Message, person_id, case_type):
+def get_item_from_case(message: Message):
+    person_id = message.from_user.id
     case_type = ""
     if message == open_case_list[0]:
         case_type = "bronze"
@@ -842,6 +872,25 @@ def experience_change(person_id, experience):
         db.set_lvl(person_id, lvl_from_table)
         db.set_health(person_id, current_health)
         db.set_strength(person_id, current_strength)
+        db.set_bronze_count(person_id, db.get_bronze_count(person_id) + 1)
+        bot.send_message(person_id, text="Вы получили бронзовый сундук!")
+        silver_count = db.get_silver_count(person_id)
+        golden_count = db.get_golden_count(person_id)
+        skin_count = db.get_skin_count(person_id)
+        if lvl_from_table % 2 == 0:
+            db.set_silver_count(person_id, silver_count + 1)
+            bot.send_message(person_id, text="Вы получили серебряный сундук!")
+        if lvl_from_table % 4 == 0:
+            db.set_golden_count(person_id, golden_count + 1)
+            bot.send_message(person_id, text="Вы получили золотой сундук!")
+        if lvl_from_table % 8 == 0:
+            db.set_skin_count(person_id, skin_count + 1)
+            bot.send_message(person_id, text="Вы получили сундук со скинами!")
+        db.save()
+        bot.send_message(person_id, text=f'Ура! Твой уровень вырос! \n'
+                                         f'Теперь твой уровень: {lvl_from_table} \n'
+                                         f'Твое здоровье: {current_health} \n'
+                                         f'Твоя сила: {current_strength}')
     db.set_exp(person_id, exp_got)
     db.save()
 
@@ -865,6 +914,7 @@ def attack(message: Message):
     my_id = message.from_user.id
     op_id = db.get_player_id(message.text.split(" ", 1)[1][1:])
     op_name = message.text.split(" ", 1)[1][1:]
+    states[my_id] = "waiting_for_attack"
     bot.send_message(message.chat.id, f'{message.text.split(" ", 1)[1]}, Вас вызвали на бой', reply_markup=kb)
 
 
