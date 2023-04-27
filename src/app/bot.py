@@ -724,22 +724,22 @@ def switch_skin_item(call: CallbackQuery):
 
 
 skin_case_list = ["Кремниевая репа", "Нейронный купол", "Циркуляционная черепно-мозговая крышка", "Бионическая башня", "Бинарный котёл",
-                  "Механический торс", "Стальной грудак", "Хромированный бюст", "Титановый каркас", "Кибернетический корпус"
+                  "Механический торс", "Стальной грудак", "Хромированный бюст", "Титановый каркас", "Кибернетический корпус",
                   "Кибер-нож", "Лазерный кинжал", "Разрядный коготь", "Бионический трезубец", "Химический меч"]
 
-bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри"
-                    "Футболка фаната AC/DC", "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви", "Эгида солнечного пламени"
-                    "Гитара", "Палочки для риса", "Длинный меч", "Катана Арасаки", "Грань бесконечности"
+bronze_case_list = ["Модный кепарик", "Вьетнамский нон", "Рыцарский шлем", "Кибершлем из Найт-сити", "Страдания лиандри",
+                    "Футболка фаната AC/DC", "Толстовка \"Люблю Том Ям\"", "Рыцарский доспех из музея Лондона", "Любимая футболка Ви", "Эгида солнечного пламени",
+                    "Гитара", "Палочки для риса", "Длинный меч", "Катана Арасаки", "Грань бесконечности",
                     "Водяной пистолет", "Миска рис еда", "Лук империи Майя", "Пистолет Джонни Сильверхенда", "Убийца кракенов"]
 
-silver_case_list = ["Пакет из под чипсов", "Летняя панамка", "Маска Джейсона", "Маска злодея из Скуби-Ду", "Шапка Мономаха"
-                    "Плащ разведкорпуса", "Черный плащ", "Костюм на Хэллоуин", "Костюм Человека-паука", "Прикид Майкла Джексона"
-                    "Боксерские перчатки Рокки", "Французский багет", "Резиновая утка", "Лестница из фильма про Джеки Чана", "Топор викинга"
+silver_case_list = ["Пакет из под чипсов", "Летняя панамка", "Маска Джейсона", "Маска злодея из Скуби-Ду", "Шапка Мономаха",
+                    "Плащ разведкорпуса", "Черный плащ", "Костюм на Хэллоуин", "Костюм Человека-паука", "Прикид Майкла Джексона",
+                    "Боксерские перчатки Рокки", "Французский багет", "Резиновая утка", "Лестница из фильма про Джеки Чана", "Топор викинга",
                     "Йо-йо", "Руки из Хаги ваги", "Хук Пуджа", "Лассо Индианы Джонса", "Требушет"]
 
-golden_case_list = ["Маска Жнеца", "Шапка хиппи", "Противогаз", "Маска Кайла Крейна", "Любимая кепка босса"
-                    "Костюм космонавта", "Халат ученого", "Mark 7", "Куртка ночного бегуна", "Косплей"
-                    "Межгалактический звездолет", "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику"
+golden_case_list = ["Маска Жнеца", "Шапка хиппи", "Противогаз", "Маска Кайла Крейна", "Любимая кепка босса",
+                    "Костюм космонавта", "Халат ученого", "Mark 7", "Куртка ночного бегуна", "Косплей",
+                    "Межгалактический звездолет", "Карандаш Джона Уика", "Клинки неразимов", "Дубинка из Харрана", "Лук-порей Хатсуне Мику",
                     "Пулемет Чака Норриса", "Палочка Гарри Поттера", "Винтовка Джима Рейнора", "Крюк-кошка", "Салют-взрыв"]
 
 
@@ -790,12 +790,20 @@ def get_item_from_case(message: Message):
     match case_type:
         case "bronze":
             case_list = bronze_case_list
+            db.set_bronze_count(person_id, db.get_bronze_count(person_id) - 1)
+            db.save()
         case "silver":
             case_list = silver_case_list
+            db.set_silver_count(person_id, db.get_silver_count(person_id) - 1)
+            db.save()
         case "gold":
             case_list = golden_case_list
+            db.set_golden_count(person_id, db.get_golden_count(person_id) - 1)
+            db.save()
         case "skin":
             case_list = skin_case_list
+            db.set_skin_count(person_id, db.get_skin_count(person_id) - 1)
+            db.save()
 
     if result < 35:
         item_rare = "обычный"
@@ -820,8 +828,9 @@ def get_item_from_case(message: Message):
     item_name = case_list[list_navigator * 5 + number_of_item_in_list]
     if case_type != "skin":
         level = int(db.get_level(person_id))
+
         if item_type == 0:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level + 1)
                              * 2 * math.sqrt(random.random() * 30 + 15))
             mod_random = random.random() * 100
             if mod_random < 80:
@@ -831,7 +840,7 @@ def get_item_from_case(message: Message):
             else:
                 item_mod = "Мудрость древних ара"
         elif item_type == 1:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level + 1)
                              * 0.05 * math.sqrt(random.random() * 30 + 15))
             mod_random = random.random() * 100
             if mod_random < 80:
@@ -841,7 +850,7 @@ def get_item_from_case(message: Message):
             else:
                 item_mod = "Ядовитые доспехи"
         elif item_type == 2:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level + 1)
                              * 0.5 * math.sqrt(random.random() * 30 + 15))
             mod_random = random.random() * 100
             if mod_random < 85:
@@ -851,7 +860,7 @@ def get_item_from_case(message: Message):
             else:
                 item_mod = "Убийца богов"
         elif item_type == 3:
-            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level)
+            item_stats = int(math.sqrt(((number_of_item_in_list + 2) // 2) * level + 1)
                              * 0.8 * math.sqrt(random.random() * 30 + 15))
         switch_item_from_case(message, person_id, item_type, item_name, item_stats, item_mod, item_rare)
     else:
