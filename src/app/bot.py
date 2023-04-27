@@ -218,8 +218,13 @@ def create_event(message: Message):
             states[message.from_user.id] = 'event_description'
         case 'event_description':
             db.update(table=table, column='description', id=id, data=message.text)
-            bot.send_message(message.chat.id, 'Выберите количество опыта за выполнение')
-            states[message.from_user.id] = 'event_exp'
+            mrk = InlineKeyboardMarkup()
+            mrk.add(InlineKeyboardButton(text='Нет', callback_data='none'))
+            mrk.add(InlineKeyboardButton(text='Бронзовый', callback_data='bronze'))
+            mrk.add(InlineKeyboardButton(text='Серебряный', callback_data='silver'))
+            mrk.add(InlineKeyboardButton(text='Золотой', callback_data='gold'))
+            bot.send_message(message.chat.id, 'Выберите какой кейс для ивента', reply_markup=mrk)
+            states[message.from_user.id] = 'event_case'
         case 'event_exp':
             if str.isdigit(message.text):
                 mrk = InlineKeyboardMarkup()
@@ -274,7 +279,22 @@ def deadline_interval(call: CallbackQuery):
     event_interval[call.from_user.id] = str(str(call.data))
 
 
-
+@bot.callback_query_handler(func=lambda call: call.from_user.id in states and states[call.from_user.id] == 'event_case')
+def event_case(call: CallbackQuery):
+    bot.edit_message_text(message_id=call.message.message_id, chat_id=call.message.chat.id, text='Напишите количесво опыта')
+    match call.data:
+        case 'none':
+            ...
+        case 'bronze':
+            ...
+        case 'silver':
+            ...
+        case 'gold':
+            ...
+        case 'skin':
+            ...
+    states[call.from_user.id] = 'event_exp'
+    # db.set_event_case()
 
 
 @bot.message_handler(commands=['delete_event'])
@@ -554,10 +574,9 @@ def choose_event(message: Message):
             raise "doesn't exist"
         else:
             if db.exists(table='event', id=message.from_user.id, column='user_id'):
+                db.add_regular_player(for_execute,message.from_user.username)
                 experience_change(execute[message.from_user.id], db.get_event_experience(message.from_user.id))
-                bot.send_message(message.chat.id,
-                                 f'Попуг {db.get_user_name(execute[message.from_user.id])} получил'
-                                 f' {db.get_event_experience(message.from_user.id)} опыта')
+                bot.send_message(message.chat.id,'Попуг выполинл ивент и был добавлен с спикок выполнивших его')
             else:
                 bot.send_message(message.chat.id, 'Нет такого ивента')
     except:
