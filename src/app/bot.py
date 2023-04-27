@@ -116,8 +116,8 @@ def start_message(message: Message):
 def registration(message: Message):
     db.create_player(id=message.from_user.id, pet_name=message.text, user_name=message.from_user.username)
     bot.reply_to(message, "Вы успешно зарегестрированы!")
-    random_body = str(random.randint(1,5))
-    random_head = str(random.randint(1,5))
+    random_body = str(random.randint(1, 5))
+    random_head = str(random.randint(1, 5))
     db.add_body_skin(message.from_user.id, random_body)
     db.add_head_skin(message.from_user.id, random_head)
     db.add_weapon_skin(message.from_user.id, "0")
@@ -127,8 +127,8 @@ def registration(message: Message):
     db.save()
     pet_image = CreatePetImage(random_body, random_head, "0")
     bot.send_photo(message.chat.id, pet_image, caption="Это ваш новый персонаж!\n"
-                                                       "В дальнейшем вы сможете"
-                                                       "изменить внешний вид своего"
+                                                       "В дальнейшем вы сможете "
+                                                       "изменить внешний вид своего "
                                                        "персонажа с помощью команды /customize_pet",
                    reply_markup=ReplyKeyboardRemove())
     del states[message.from_user.id]
@@ -680,17 +680,14 @@ def switch_item_from_case(message: Message, person_id, item_type, item_name, ite
     states[person_id] = "switching_item"
     case_data[person_id] = [current_name, current_stats, current_rare, current_mod, db_item_name]
     bot.send_message(message.chat.id, text=f'Ого! Тебе выпал предмет *{item_name}*! \n'
-                                           f'Хочешь поменять его с {current_name}? \n'
-                                           f'Выпало {item_name}: \n'
-                                           f'Тип: {item_type_for_text} \n'
-                                           f'Редкость: {item_rare} \n'
-                                           f'Статы: {item_stats} \n'
-                                           f'Модификаторы: {item_mod} \n'
-                                           f'Надето {current_name}: \n'
-                                           f'Тип: {item_type_for_text} \n'
-                                           f'Редкость: {current_rare} \n'
-                                           f'Статы: {current_stats} \n'
-                                           f'Модификаторы: {current_mod} \n', reply_markup=kb_it_ce, parse_mode="Markdown")
+                                           f'Хочешь поменять его с *{current_name}*? \n'
+                                           f'При замене: \n'
+                                           f'Имя: ___{current_name}___ -> ___{item_name}___ \n'
+                                           f'Тип: ___{item_type_for_text}___ \n'
+                                           f'Редкость: ___{current_rare}___ -> ___{item_rare}___ \n'
+                                           f'Статы: ___{current_stats}___ -> ___{item_stats}___ \n'
+                                           f'Модификаторы: ___{current_mod}___ -> ___{item_mod}___ \n',
+                     reply_markup=kb_it_ce, parse_mode="Markdown")
 
 
 def switch_skin_from_case(message: Message, person_id, item_type, item_name, item_rare):
@@ -700,20 +697,28 @@ def switch_skin_from_case(message: Message, person_id, item_type, item_name, ite
     match item_type:
         case 0:
             db_item_name = "helmet"
-            item_type_for_text = "Шлем"
+            item_type_for_text = "шлем"
             current_skin = db.get_head_skin(person_id)
+            db.add_head_skin(person_id, item_name)
+            db.save()
         case 1:
             db_item_name = "chestplate"
-            item_type_for_text = "Нагрудник"
+            item_type_for_text = "нагрудник"
             current_skin = db.get_body_skin(person_id)
+            db.add_body_skin(person_id, item_name)
+            db.save()
         case 2:
             db_item_name = "item1"
-            item_type_for_text = "Оружие ближнего боя"
+            item_type_for_text = "оружие ближнего боя"
             current_skin = db.get_weapon_skin(person_id)
+            db.add_weapon_skin(person_id, item_name)
+            db.save()
     states[person_id] = "switching_skin"
-    case_data[person_id] = [item_name, item_rare]
-    bot.send_message(message.chat.id, text=f'Невероятно, тебе выпал скин {item_name}, редкости {item_rare}! \n'
-                                           f'Хочешь сменить старый скин {current_skin} на {item_name}? \n'
+    case_data[person_id] = [item_name, db_item_name]
+    bot.send_message(message.chat.id, text=f'Невероятно, тебе выпал скин *{item_name}*, '
+                                           f'редкости ___{item_rare}___! \n'
+                                           f'Это ___{item_type_for_text}___ \n'
+                                           f'Хочешь сменить старый скин ___{current_skin}___ на ___{item_name}___? \n'
                                            f'Не бойся, оба скина будут тебе доступны', reply_markup=kb_it_ce)
 
 
@@ -722,11 +727,7 @@ def switch_skin_from_case(message: Message, person_id, item_type, item_name, ite
 def switching_or_not(call: CallbackQuery):
     if call.data == "change":
         person_id = call.from_user.id
-        new_name = case_data[person_id][0]
-        new_stats = case_data[person_id][1]
-        new_rare = case_data[person_id][2]
-        new_mod = case_data[person_id][3]
-        new_type = case_data[person_id][4]
+        new_name, new_stats, new_rare, new_mod, new_type = case_data[person_id][:4]
         new_item_id = db.create_item(person_id, new_type, new_name, new_rare, new_stats, new_mod)
         db.set_item(person_id, new_type, new_item_id)
         bot.send_message(person_id, text="Отличное решение!")
@@ -738,10 +739,16 @@ def switching_or_not(call: CallbackQuery):
 @bot.callback_query_handler(func=lambda call: call.data in ['change skin', 'dont change skin']
                             and call.from_user.id in states and states[call.from_user.id] == "switching_skin")
 def switch_skin_item(call: CallbackQuery):
+    person_id = call.from_user.id
     if call.data == "change skin":
-        person_id = call.from_user.id
         new_name = case_data[0]
-        new_rare = case_data[1]
+        match case_data[1]:
+            case "helmet":
+                db.set_head_skin(person_id, new_name)
+            case "chestplate":
+                db.set_body_skin(person_id, new_name)
+            case "item1":
+                db.set_weapon_skin(person_id, new_name)
 
         bot.send_message(person_id, text="Отличное решение!")
         db.save()
@@ -923,9 +930,9 @@ def experience_change(person_id, experience):
             bot.send_message(person_id, text="Вы получили сундук со скинами!")
         db.save()
         bot.send_message(person_id, text=f'Ура! Твой уровень вырос! \n'
-                                         f'Теперь твой уровень: {lvl_from_table} \n'
-                                         f'Твое здоровье: {current_health} \n'
-                                         f'Твоя сила: {current_strength}')
+                                         f'Теперь твой уровень: ___{lvl_from_table}___ \n'
+                                         f'Твое здоровье: ___{current_health}___ \n'
+                                         f'Твоя сила: ___{current_strength}___')
     db.set_exp(person_id, exp_got)
     db.save()
 
@@ -1073,19 +1080,19 @@ def attack_user(call: CallbackQuery):
                 if krit_perrot_flag == 1:
                     mods_attack_list.append("Критовый попуг")
 
-                bot.send_message(my_id, f'Атакует - {db.get_pet_name(my_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
-                                 f'Всего урона с модификаторами: {sum_damage} \n' +
-                                 f'Защищается - {db.get_pet_name(op_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
-                                 f'Всего получено урона: {last_hp - op_hp}')
+                bot.send_message(my_id, f'Атакует - *{db.get_pet_name(my_id)}* \n' +
+                                 f'Моды, использованные в раунде: ___{mods_attack_list}___ \n' +
+                                 f'Всего урона с модификаторами: ___{sum_damage}___ \n' +
+                                 f'Защищается - ___{db.get_pet_name(op_id)}___ \n' +
+                                 f'Моды, использованные в раунде: ___{mods_defend_list}___ \n' +
+                                 f'Всего получено урона: ___{last_hp - op_hp}___')
 
-                bot.send_message(op_id, f'Атакует - {db.get_pet_name(my_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
-                                 f'Всего урона с модификаторами: {sum_damage} \n' +
-                                 f'Защищается - {db.get_pet_name(op_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
-                                 f'Всего получено урона: {last_hp - op_hp}')
+                bot.send_message(op_id, f'Атакует - *{db.get_pet_name(my_id)}* \n' +
+                                 f'Моды, использованные в раунде: ___{mods_attack_list}___ \n' +
+                                 f'Всего урона с модификаторами: ___{sum_damage}___ \n' +
+                                 f'Защищается - ___{db.get_pet_name(op_id)}___ \n' +
+                                 f'Моды, использованные в раунде: ___{mods_defend_list}___ \n' +
+                                 f'Всего получено урона: ___{last_hp - op_hp}___')
                 attacker = "opponent"
 
             else:
@@ -1150,34 +1157,34 @@ def attack_user(call: CallbackQuery):
                 if krit_perrot_flag == 1:
                     mods_attack_list.append("Критовый попуг")
 
-                bot.send_message(my_id, f'Атакует - {db.get_pet_name(op_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
-                                 f'Всего урона с модификаторами: {sum_damage} \n' +
-                                 f'Защищается - {db.get_pet_name(my_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
-                                 f'Всего получено урона: {last_hp - my_hp}')
+                bot.send_message(my_id, f'Атакует - *{db.get_pet_name(op_id)}* \n' +
+                                 f'Моды, использованные в раунде: ___{mods_attack_list}___ \n' +
+                                 f'Всего урона с модификаторами: ___{sum_damage}___ \n' +
+                                 f'Защищается - ___{db.get_pet_name(my_id)}___ \n' +
+                                 f'Моды, использованные в раунде: ___{mods_defend_list}___ \n' +
+                                 f'Всего получено урона: ___{last_hp - my_hp}___')
 
-                bot.send_message(op_id, f'Атакует - {db.get_pet_name(op_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_attack_list} \n' +
-                                 f'Всего урона с модификаторами: {sum_damage} \n' +
-                                 f'Защищается - {db.get_pet_name(my_id)} \n' +
-                                 f'Моды, использованные в раунде: {mods_defend_list} \n' +
-                                 f'Всего получено урона: {last_hp - my_hp}')
+                bot.send_message(op_id, f'Атакует - *{db.get_pet_name(op_id)}* \n' +
+                                 f'Моды, использованные в раунде: ___{mods_attack_list}___ \n' +
+                                 f'Всего урона с модификаторами: ___{sum_damage}___ \n' +
+                                 f'Защищается - ___{db.get_pet_name(my_id)}___ \n' +
+                                 f'Моды, использованные в раунде: ___{mods_defend_list}___ \n' +
+                                 f'Всего получено урона: ___{last_hp - my_hp}___')
 
                 attacker = "me"
 
         if my_hp <= 0:
             stolen_cookies = int(random.random() * db.get_balance(my_id) / 5)
-            bot.send_message(my_id, f'Победитель - {db.get_pet_name(op_id)} \n'
-                                    f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
-            bot.send_message(op_id, f'Победитель - {db.get_pet_name(op_id)} \n'
-                                    f'он крадет у {db.get_pet_name(my_id)} {stolen_cookies} \n')
+            bot.send_message(my_id, f'Победитель - *{db.get_pet_name(op_id)}* \n'
+                                    f'он крадет у {db.get_pet_name(my_id)} ___{stolen_cookies}___ печенек\n')
+            bot.send_message(op_id, f'Победитель - *{db.get_pet_name(op_id)}* \n'
+                                    f'он крадет у {db.get_pet_name(my_id)} ___{stolen_cookies}___ печенек\n')
         else:
             stolen_cookies = int(random.random() * db.get_balance(op_id) / 5)
-            bot.send_message(my_id, f'Победитель - {db.get_pet_name(my_id)} \n'
-                                    f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
-            bot.send_message(op_id, f'Победитель - {db.get_pet_name(op_id)} \n'
-                                    f'он крадет у {db.get_pet_name(op_id)} {stolen_cookies} \n')
+            bot.send_message(my_id, f'Победитель - *{db.get_pet_name(my_id)}* \n'
+                                    f'он крадет у {db.get_pet_name(op_id)} ___{stolen_cookies}___ печенек\n')
+            bot.send_message(op_id, f'Победитель - *{db.get_pet_name(op_id)}* \n'
+                                    f'он крадет у {db.get_pet_name(op_id)} ___{stolen_cookies}___ печенек\n')
 
     elif call.data == "cancel":
         bot.edit_message_text(chat_id=call.message.chat.id,
@@ -1188,7 +1195,6 @@ def attack_user(call: CallbackQuery):
 
 
 # CustomizePet
-
 def CreatePetImage(number_of_body, number_of_head, number_of_weapon):
     way_to_body = "app/Images/Body" + number_of_body + ".png"
     way_to_head = "app/Images/Head" + number_of_head + ".png"
@@ -1214,17 +1220,21 @@ def CreateVersusImage(first_pet, second_pet):
     new_image.paste(second_pet, (1232, 0))
     return new_image
 
+
 '''
 sl_head={3:"Кремниевая репа", 4: "Нейронный купол", 2: "Циркуляционная черепно-мозговая крышка", 1: "Бионическая башня", 5: "Бинарный котёл"}
 sl_body={1:"Механический торс", 2:"Стальной грудак", 5: "Хромированный бюст", 3:"Титановый каркас", 4:"Кибернетический корпус"}
 sl_weapon={1:"Кибер-нож", 2:"Лазерный кинжал", 3:"Разрядный коготь", 4:"Бионический трезубец", 5:"Химический меч"}
 '''
 
+
 def InlineMarkupFromList(l):
     inline_markup = InlineKeyboardMarkup()
     for each in l:
         inline_markup.add(InlineKeyboardButton(text=each, switch_inline_query_current_chat=each))
     return inline_markup
+
+
 @bot.message_handler(commands=["customize_pet"])
 def CustomizePet(message: Message):
     cur_body = db.get_body_skin(message.from_user.id)
@@ -1246,6 +1256,8 @@ def CustomizePet(message: Message):
                                               'change_body',
                                               'change_weapon'
                                           ])
+
+
 def Customizing(message: Message):
     current_state = str(states[message.from_user.id])
     cur_body = db.get_body_skin(message.from_user.id)
